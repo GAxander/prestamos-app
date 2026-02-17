@@ -4,10 +4,8 @@ generator client {
 }
 
 datasource db {
-  // Nota: Si usas PostgreSQL o MySQL, cambia "sqlite" por el tuyo.
-  // Por defecto en local suele ser sqlite.
-  provider = "sqlite" 
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // <--- Neon usa este nombre estándar
 }
 
 // 2. MODELOS DE DATOS
