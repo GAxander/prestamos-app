@@ -1,0 +1,84 @@
+// 1. CONFIGURACIÓN INICIAL (Esto es lo que faltaba)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Nota: Si usas PostgreSQL o MySQL, cambia "sqlite" por el tuyo.
+  // Por defecto en local suele ser sqlite.
+  provider = "sqlite" 
+  url      = env("DATABASE_URL")
+}
+
+// 2. MODELOS DE DATOS
+
+model Usuario {
+  id        Int       @id @default(autoincrement())
+  username  String    @unique
+  password  String
+  clientes  Cliente[]
+}
+
+model Cliente {
+  id        Int       @id @default(autoincrement())
+  nombre    String
+  telefono  String?
+  direccion String?
+  
+  // Relación con Usuario
+  usuarioId Int
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+  
+  prestamos Prestamo[]
+  createdAt DateTime  @default(now())
+}
+
+model Prestamo {
+  id                Int      @id @default(autoincrement())
+  clienteId         Int
+  montoCapital      Decimal
+  interesPorcentaje Decimal
+  plazo             Int      // Número de cuotas
+  frecuencia        String
+  estado            String   @default("ACTIVO")
+  fechaInicio       DateTime
+  moraDiaria        Decimal  @default(0)
+  createdAt         DateTime @default(now())
+
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+  cuotas  Cuota[]
+  pagos   Pago[]
+  notas   Nota[]
+}
+
+model Cuota {
+  id               Int      @id @default(autoincrement())
+  prestamoId       Int
+  numero           Int
+  fechaVencimiento DateTime
+  montoEsperado    Decimal
+  montoPagado      Decimal  @default(0)
+  estado           String   @default("PENDIENTE")
+
+  prestamo Prestamo @relation(fields: [prestamoId], references: [id])
+}
+
+model Pago {
+  id         Int      @id @default(autoincrement())
+  prestamoId Int
+  monto      Decimal
+  fecha      DateTime @default(now())
+  tipo       String   // "CUOTA", "MORA", "ANULACION"
+  nota       String?
+
+  prestamo Prestamo @relation(fields: [prestamoId], references: [id])
+}
+
+model Nota {
+  id         Int      @id @default(autoincrement())
+  prestamoId Int
+  texto      String
+  fecha      DateTime @default(now())
+
+  prestamo   Prestamo @relation(fields: [prestamoId], references: [id])
+}
