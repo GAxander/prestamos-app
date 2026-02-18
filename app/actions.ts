@@ -589,3 +589,28 @@ export async function eliminarNota(formData: FormData) {
   revalidatePath(`/prestamo/${prestamoId}`)
 }
 
+// Al final de app/actions.ts
+
+export async function eliminarCliente(clienteId: number) {
+  // 1. Verificar seguridad (que seas tú)
+  const userId = await verificarSesion()
+
+  // 2. Verificar que el cliente sea tuyo antes de borrarlo
+  const cliente = await prisma.cliente.findUnique({
+    where: { id: clienteId }
+  })
+
+  // Si no existe o es de otro usuario (ej: de tu hermano), error.
+  if (!cliente || cliente.usuarioId !== userId) {
+    throw new Error("No tienes permiso para eliminar este cliente")
+  }
+
+  // 3. Borrar (Gracias al Paso 1, esto borra también sus préstamos)
+  await prisma.cliente.delete({
+    where: { id: clienteId }
+  })
+
+  // 4. Recargar la página para ver que desapareció
+  revalidatePath('/')
+}
+

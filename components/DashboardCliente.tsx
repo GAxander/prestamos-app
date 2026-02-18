@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { eliminarCliente } from '@/app/actions' // <--- Importamos la acción
 
 // NUEVO TIPO DE DATO AGRUPADO
 export type GrupoDeuda = {
@@ -16,6 +17,7 @@ type Cliente = {
   id: number
   nombre: string
   telefono: string | null
+  createdAt: Date
   prestamos: any[]
 }
 
@@ -23,8 +25,8 @@ type Props = {
   clientes: Cliente[]
   totalCapitalEnCalle: number
   totalClientesActivos: number
-  vencidos: GrupoDeuda[]   // <--- Ahora recibimos grupos
-  porVencer: GrupoDeuda[]  // <--- Ahora recibimos grupos
+  vencidos: GrupoDeuda[]
+  porVencer: GrupoDeuda[]
 }
 
 export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalClientesActivos, vencidos, porVencer }: Props) {
@@ -33,6 +35,17 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
   const clientesFiltrados = clientes.filter(c => 
     c.nombre.toLowerCase().includes(busqueda.toLowerCase())
   )
+
+  // --- FUNCIÓN PARA BORRAR CLIENTE ---
+  const handleBorrarCliente = async (id: number, nombre: string) => {
+    const confirmado = window.confirm(
+      `¿Estás seguro de eliminar a ${nombre}?\n\n⚠️ SE BORRARÁN TODOS SUS PRÉSTAMOS, PAGOS Y DEUDAS.\n\nEsta acción no se puede deshacer.`
+    )
+
+    if (confirmado) {
+      await eliminarCliente(id)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-20">
@@ -160,7 +173,7 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
 
       </div>
 
-      {/* LISTA CLIENTES (Sin cambios) */}
+      {/* LISTA CLIENTES */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[500px]">
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
           <h2 className="font-bold text-gray-700">Cartera de Clientes ({clientesFiltrados.length})</h2>
@@ -188,7 +201,9 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
               return (
                 <div key={cliente.id} className="p-4 hover:bg-blue-50 transition group">
                   <div className="flex justify-between items-start">
-                    <Link href={`/cliente/${cliente.id}`} className="block w-full">
+                    
+                    {/* ENLACE PRINCIPAL AL DETALLE */}
+                    <Link href={`/cliente/${cliente.id}`} className="block flex-1">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm ${tieneDeuda ? 'bg-blue-600' : 'bg-gray-300'}`}>
                           {cliente.nombre.charAt(0).toUpperCase()}
@@ -199,7 +214,19 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                         </div>
                       </div>
                     </Link>
-                    <div className="text-right">
+
+                    {/* LADO DERECHO: PRÉSTAMOS Y BOTÓN BORRAR */}
+                    <div className="text-right flex flex-col items-end gap-2">
+                       {/* BOTÓN BORRAR CLIENTE */}
+                       <button
+                          onClick={() => handleBorrarCliente(cliente.id, cliente.nombre)}
+                          className="text-gray-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-colors"
+                          title="Eliminar Cliente"
+                        >
+                          🗑️
+                        </button>
+
+                       {/* ETIIQUETAS DE PRÉSTAMOS */}
                        {tieneDeuda ? (
                          <div className="flex flex-col gap-1 items-end">
                             {cliente.prestamos.map((p: any) => (
@@ -214,6 +241,7 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                          <span className="text-[10px] text-gray-300 italic">Sin deuda activa</span>
                        )}
                     </div>
+
                   </div>
                 </div>
               )
