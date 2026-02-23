@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { eliminarCliente } from '@/app/actions' // <--- Importamos la acción
+import { eliminarCliente } from '@/app/actions' 
 
 // NUEVO TIPO DE DATO AGRUPADO
 export type GrupoDeuda = {
@@ -182,10 +182,11 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
         <div className="p-4 border-b border-gray-100">
           <div className="relative">
             <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+            {/* 👇 AQUÍ AGREGAMOS LAS CLASES DE COLOR OSCURO */}
             <input 
               type="text"
               placeholder="Buscar cliente por nombre..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 transition"
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 transition text-gray-900 font-medium placeholder:text-gray-400"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
             />
