@@ -45,17 +45,70 @@ export async function cerrarSesion() {
   await logout()
 }
 
-// --- 1. CREAR PRÉSTAMO (Lógica Flexible) ---
 export async function crearPrestamo(formData: FormData) {
   const userId = await verificarSesion()
+  
+  // 👇 NUEVO: Atrapamos el ID oculto que nos manda el formulario inteligente
+  const clienteIdForm = formData.get('clienteId') as string 
+  
   const nombre = formData.get('nombre') as string
   const telefono = formData.get('telefono') as string
   const monto = Number(formData.get('monto'))
-  const interesMensual = Number(formData.get('interes')) // Tasa mensual (ej: 20%)
-  const numeroCuotas = Number(formData.get('cuotas')) // Antes era plazo, ahora es cantidad de pagos
-  const frecuencia = formData.get('frecuencia') as 'DIARIO' | 'SEMANAL' | 'QUINCENAL' | 'MENSUAL'
+  const interesMensual = Number(formData.get('interes')) 
+  const numeroCuotas = Number(formData.get('cuotas')) 
+  const frecuencia = formData.get('frecuencia') as 'DIARIO' | 'SEMANAL' | 'QUINCENAL' | 'MEN কমপক্ষেMENSUAL'
   const fechaInicio = new Date(formData.get('fechaInicio') as string)
   const moraDiaria = Number(formData.get('moraDiaria') || 0)
+
+  // Validaciones básicas
+  if (!nombre || monto <= 0 || numeroCuotas <= 0) {
+    throw new Error("Datos inválidos")
+  }
+
+  // ------------------------------------------------------------------
+  // 🧠 NUEVA LÓGICA INTELIGENTE DE CLIENTE
+  // ------------------------------------------------------------------
+  let clienteIdFinal: number
+
+  if (clienteIdForm) {
+    // CASO A: El usuario seleccionó un cliente de la lista desplegable
+    clienteIdFinal = Number(clienteIdForm)
+    
+    // De paso, actualizamos su teléfono en la base de datos por si lo editaron
+    await prisma.cliente.update({
+      where: { id: clienteIdFinal },
+      data: { telefono }
+    })
+  } else {
+    // CASO B: Es un cliente nuevo (o escribieron el nombre sin hacer clic en la lista)
+    // Primero verificamos por nombre por si acaso, para no duplicar
+    let cliente = await prisma.cliente.findFirst({ 
+      where: { 
+        nombre: nombre,
+        usuarioId: userId 
+      } 
+    })
+    
+    if (cliente) {
+      clienteIdFinal = cliente.id
+      // Actualizamos teléfono
+      await prisma.cliente.update({
+        where: { id: clienteIdFinal },
+        data: { telefono }
+      })
+    } else {
+      // Definitivamente es nuevo, lo creamos de cero
+      const nuevoCliente = await prisma.cliente.create({ 
+        data: { 
+          nombre, 
+          telefono,
+          usuarioId: userId
+        } 
+      })
+      clienteIdFinal = nuevoCliente.id
+    }
+  }
+  // ------------------------------------------------------------------
 
   // 1. Determinar cuántos días dura cada cuota
   let diasPorCuota = 1
@@ -67,34 +120,11 @@ export async function crearPrestamo(formData: FormData) {
   const duracionTotalDias = numeroCuotas * diasPorCuota
 
   // 3. Calcular el Interés Proporcional
-  // Fórmula: (Capital * TasaMensual) * (DiasTotales / 30 dias que tiene un mes)
   const gananciaInteres = monto * (interesMensual / 100) * (duracionTotalDias / 30)
 
   // 4. Calcular montos
   const totalAPagar = monto + gananciaInteres
   const montoPorCuota = totalAPagar / numeroCuotas
-
-  // Validaciones básicas
-  if (!nombre || monto <= 0 || numeroCuotas <= 0) {
-    throw new Error("Datos inválidos")
-  }
-
-  // Buscar o crear cliente
-  let cliente = await prisma.cliente.findFirst({ 
-    where: { 
-      nombre: nombre,
-      usuarioId: userId 
-    } 
-  })
-  if (!cliente) {
-    cliente = await prisma.cliente.create({ 
-      data: { 
-        nombre, 
-        telefono,
-        usuarioId: userId
-      } 
-    })
-  }
 
   // Generar el array de cuotas
   const cuotas = []
@@ -107,14 +137,9 @@ export async function crearPrestamo(formData: FormData) {
     // Sumamos los días según la frecuencia
     fechaActual.setDate(fechaActual.getDate() + diasPorCuota)
     
-    // Si cae Domingo y es Diario, lo saltamos (Opcional, por ahora lo dejamos simple)
-    // if (frecuencia === 'DIARIO' && fechaActual.getDay() === 0) {
-    //    fechaActual.setDate(fechaActual.getDate() + 1)
-    // }
-
     cuotas.push({
       numero: i,
-      fechaVencimiento: new Date(fechaActual), // Copia de la fecha
+      fechaVencimiento: new Date(fechaActual),
       monto: montoPorCuota
     })
   }
@@ -122,11 +147,12 @@ export async function crearPrestamo(formData: FormData) {
   // Guardar en Base de Datos
   await prisma.prestamo.create({
     data: {
-      clienteId: cliente.id,
+      // 👇 USAMOS EL ID FINAL QUE CALCULAMOS ARRIBA
+      clienteId: clienteIdFinal, 
       montoCapital: monto,
       interesPorcentaje: interesMensual,
       frecuencia: frecuencia,
-      plazo: numeroCuotas, // Ahora "plazo" guarda el número de cuotas
+      plazo: numeroCuotas, 
       fechaInicio: fechaInicio,
       moraDiaria: moraDiaria,
       cuotas: {

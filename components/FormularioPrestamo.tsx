@@ -3,71 +3,139 @@
 import { useState, useEffect } from 'react'
 import { crearPrestamo } from '@/app/actions'
 
-export default function FormularioPrestamo() {
-  // Estados
+// 1. DEFINIMOS EL TIPO DE LOS CLIENTES QUE NOS PASA LA PÁGINA
+type ClienteCorto = {
+  id: number
+  nombre: string
+  telefono: string | null
+}
+
+type Props = {
+  clientesExistentes?: ClienteCorto[]
+}
+
+export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
+  // --- ESTADOS DEL CLIENTE (NUEVOS) ---
+  const [nombre, setNombre] = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [clienteId, setClienteId] = useState<number | null>(null)
+  
+  // --- ESTADOS DEL BUSCADOR (NUEVOS) ---
+  const [sugerencias, setSugerencias] = useState<ClienteCorto[]>([])
+  const [mostrarSugerencias, setMostrarSugerencias] = useState(false)
+
+  // --- ESTADOS DEL PRÉSTAMO (Los que ya tenías) ---
   const [monto, setMonto] = useState(1000)
   const [interes, setInteres] = useState(10)
   const [cuotas, setCuotas] = useState(1)
   const [frecuencia, setFrecuencia] = useState('MENSUAL')
-  
-  // NUEVO: Estado para la mora automática
   const [mora, setMora] = useState(0)
-  
-  // Resultados calculados
   const [calculo, setCalculo] = useState({ total: 0, cuota: 0, ganancia: 0, tiempo: '' })
 
   useEffect(() => {
-    // 1. Determinar días por cuota
     let dias = 1
     if (frecuencia === 'SEMANAL') dias = 7
     if (frecuencia === 'QUINCENAL') dias = 15
     if (frecuencia === 'MENSUAL') dias = 30
 
-    // 2. Duración real del préstamo en días
     const duracionDias = cuotas * dias
-    
-    // 3. Calcular Ganancia (Interés Proporcional)
-    // Fórmula: Capital * (TasaMensual/100) * (DíasReales / 30)
     const ganancia = monto * (interes / 100) * (duracionDias / 30)
-    
     const total = monto + ganancia
     const valorCuota = total / cuotas
-
-    // 4. CÁLCULO AUTOMÁTICO DE MORA
     const moraSugerida = duracionDias > 0 ? (ganancia / duracionDias) : 0
 
-    // Actualizamos el estado de la mora automáticamente
     setMora(Number(moraSugerida.toFixed(2)))
 
-    // Texto de tiempo estimado
     let textoTiempo = `${duracionDias} días`
     if (duracionDias > 30) textoTiempo = `${(duracionDias/30).toFixed(1)} meses`
 
-    setCalculo({
-      total,
-      cuota: valorCuota,
-      ganancia,
-      tiempo: textoTiempo
-    })
-
+    setCalculo({ total, cuota: valorCuota, ganancia, tiempo: textoTiempo })
   }, [monto, interes, cuotas, frecuencia]) 
+
+  // --- FUNCIONES DEL AUTOCOMPLETADO ---
+  const handleNombreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valor = e.target.value
+    setNombre(valor)
+    setClienteId(null) // Si editas el nombre, ya no es el cliente guardado, asume que es uno nuevo
+
+    if (valor.trim().length > 0) {
+      const filtrados = clientesExistentes.filter(c => 
+        c.nombre.toLowerCase().includes(valor.toLowerCase())
+      )
+      setSugerencias(filtrados)
+      setMostrarSugerencias(true)
+    } else {
+      setSugerencias([])
+      setMostrarSugerencias(false)
+    }
+  }
+
+  const seleccionarCliente = (cliente: ClienteCorto) => {
+    setNombre(cliente.nombre)
+    setTelefono(cliente.telefono || '')
+    setClienteId(cliente.id) // Guardamos su ID secreto
+    setMostrarSugerencias(false) // Cerramos el menú
+  }
 
   return (
     <form action={crearPrestamo} className="p-6 space-y-6">
       
+      {/* CAMPO OCULTO: Envía el ID del cliente al servidor si seleccionamos uno existente */}
+      <input type="hidden" name="clienteId" value={clienteId || ''} />
+
       {/* 1. CLIENTE */}
       <div className="space-y-4">
         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b pb-2">Datos del Cliente</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+          
+          {/* CAMPO NOMBRE CON BUSCADOR */}
+          <div className="relative">
             <label className="block text-xs font-bold text-gray-700 mb-1">Nombre Completo</label>
-            {/* 👇 Texto oscuro agregado */}
-            <input name="nombre" type="text" placeholder="Ej: Juan Perez" required className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-gray-900 font-medium placeholder:text-gray-400" />
+            <input 
+              name="nombre" 
+              type="text" 
+              placeholder="Ej: Juan Perez" 
+              required 
+              autoComplete="off"
+              value={nombre}
+              onChange={handleNombreChange}
+              onBlur={() => setTimeout(() => setMostrarSugerencias(false), 200)} // Retraso leve para que detecte el click en la sugerencia
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-gray-900 font-medium placeholder:text-gray-400" 
+            />
+            
+            {/* MENÚ DESPLEGABLE DE SUGERENCIAS */}
+            {mostrarSugerencias && sugerencias.length > 0 && (
+              <ul className="absolute z-10 w-full mt-1 bg-white border border-blue-200 rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-gray-50">
+                {sugerencias.map(cliente => (
+                  <li 
+                    key={cliente.id}
+                    onMouseDown={(e) => {
+                      e.preventDefault() // Evita que el onBlur del input dispare antes
+                      seleccionarCliente(cliente)
+                    }}
+                    className="p-3 hover:bg-blue-50 cursor-pointer transition-colors"
+                  >
+                    <p className="font-bold text-gray-800 text-sm flex items-center justify-between">
+                      {cliente.nombre}
+                      <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Existente</span>
+                    </p>
+                    {cliente.telefono && <p className="text-xs text-gray-400">📞 {cliente.telefono}</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono (WhatsApp)</label>
-            {/* 👇 Texto oscuro agregado */}
-            <input name="telefono" type="tel" placeholder="999 000 000" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none text-gray-900 font-medium placeholder:text-gray-400" />
+            <input 
+              name="telefono" 
+              type="tel" 
+              placeholder="999 000 000" 
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none text-gray-900 font-medium placeholder:text-gray-400" 
+            />
           </div>
         </div>
       </div>
@@ -80,7 +148,6 @@ export default function FormularioPrestamo() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Monto a Prestar (S/)</label>
-            {/* 👇 Texto súper negro y grande para el dinero */}
             <input 
               name="monto" 
               type="number" 
@@ -91,7 +158,6 @@ export default function FormularioPrestamo() {
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Frecuencia de Pago</label>
-            {/* 👇 Texto oscuro agregado */}
             <select 
               name="frecuencia" 
               value={frecuencia}
@@ -111,7 +177,6 @@ export default function FormularioPrestamo() {
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Interés Mensual (%)</label>
             <div className="relative">
-              {/* 👇 Texto oscuro agregado */}
               <input 
                 name="interes" 
                 type="number" 
@@ -124,7 +189,6 @@ export default function FormularioPrestamo() {
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">N° de Cuotas</label>
-            {/* 👇 Texto oscuro agregado */}
             <input 
               name="cuotas" 
               type="number" 
@@ -139,7 +203,6 @@ export default function FormularioPrestamo() {
         <div className="grid grid-cols-2 gap-4">
            <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de Inicio</label>
-              {/* 👇 Texto oscuro agregado */}
               <input name="fechaInicio" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none text-gray-900 font-medium" />
            </div>
            <div>
@@ -147,7 +210,6 @@ export default function FormularioPrestamo() {
                  <span>Mora x Día (S/)</span>
                  <span className="text-[10px] text-blue-500 font-normal self-center">Automático ✨</span>
               </label>
-              {/* La mora ya estaba bien visible en azul, la dejé azul oscuro (blue-900) para más contraste */}
               <input 
                  name="moraDiaria" 
                  type="number" 
