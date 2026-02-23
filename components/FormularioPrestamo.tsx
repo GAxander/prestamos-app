@@ -34,8 +34,6 @@ export default function FormularioPrestamo() {
     const valorCuota = total / cuotas
 
     // 4. CÁLCULO AUTOMÁTICO DE MORA
-    // Lógica: La mora diaria justa es igual a lo que ganas en un día normal.
-    // Si ganas 100 soles en 20 días, tu mora diaria debería ser 5 soles.
     const moraSugerida = duracionDias > 0 ? (ganancia / duracionDias) : 0
 
     // Actualizamos el estado de la mora automáticamente
@@ -52,7 +50,7 @@ export default function FormularioPrestamo() {
       tiempo: textoTiempo
     })
 
-  }, [monto, interes, cuotas, frecuencia]) // Se recalcula cada vez que cambias algo
+  }, [monto, interes, cuotas, frecuencia]) 
 
   return (
     <form action={crearPrestamo} className="p-6 space-y-6">
@@ -63,11 +61,13 @@ export default function FormularioPrestamo() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Nombre Completo</label>
-            <input name="nombre" type="text" placeholder="Ej: Juan Perez" required className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
+            {/* 👇 Texto oscuro agregado */}
+            <input name="nombre" type="text" placeholder="Ej: Juan Perez" required className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-gray-900 font-medium placeholder:text-gray-400" />
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono (WhatsApp)</label>
-            <input name="telefono" type="tel" placeholder="999 000 000" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none" />
+            {/* 👇 Texto oscuro agregado */}
+            <input name="telefono" type="tel" placeholder="999 000 000" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-none text-gray-900 font-medium placeholder:text-gray-400" />
           </div>
         </div>
       </div>
@@ -80,21 +80,23 @@ export default function FormularioPrestamo() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Monto a Prestar (S/)</label>
+            {/* 👇 Texto súper negro y grande para el dinero */}
             <input 
               name="monto" 
               type="number" 
               value={monto} 
               onChange={e => setMonto(Number(e.target.value))}
-              className="w-full p-3 font-bold text-gray-800 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+              className="w-full p-3 font-black text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-lg" 
             />
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Frecuencia de Pago</label>
+            {/* 👇 Texto oscuro agregado */}
             <select 
               name="frecuencia" 
               value={frecuencia}
               onChange={e => setFrecuencia(e.target.value)}
-              className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none"
+              className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none text-gray-900 font-medium"
             >
               <option value="DIARIO">Diario (Cada día)</option>
               <option value="SEMANAL">Semanal (Cada 7 días)</option>
@@ -109,24 +111,26 @@ export default function FormularioPrestamo() {
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Interés Mensual (%)</label>
             <div className="relative">
+              {/* 👇 Texto oscuro agregado */}
               <input 
                 name="interes" 
                 type="number" 
                 value={interes}
                 onChange={e => setInteres(Number(e.target.value))}
-                className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none" 
+                className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none text-gray-900 font-medium" 
               />
               <span className="absolute right-4 top-3 text-gray-400 font-bold">%</span>
             </div>
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">N° de Cuotas</label>
+            {/* 👇 Texto oscuro agregado */}
             <input 
               name="cuotas" 
               type="number" 
               value={cuotas}
               onChange={e => setCuotas(Number(e.target.value))}
-              className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none" 
+              className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none text-gray-900 font-medium" 
             />
           </div>
         </div>
@@ -135,22 +139,22 @@ export default function FormularioPrestamo() {
         <div className="grid grid-cols-2 gap-4">
            <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de Inicio</label>
-              <input name="fechaInicio" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none" />
+              {/* 👇 Texto oscuro agregado */}
+              <input name="fechaInicio" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none text-gray-900 font-medium" />
            </div>
            <div>
               <label className="block text-xs font-bold text-gray-700 mb-1 flex justify-between">
                  <span>Mora x Día (S/)</span>
                  <span className="text-[10px] text-blue-500 font-normal self-center">Automático ✨</span>
               </label>
+              {/* La mora ya estaba bien visible en azul, la dejé azul oscuro (blue-900) para más contraste */}
               <input 
                  name="moraDiaria" 
                  type="number" 
                  step="0.01" 
-                 // AQUÍ USAMOS EL ESTADO CALCULADO
                  value={mora}
-                 // Pero permitimos editar si tú quieres cambiarlo manualmente
                  onChange={e => setMora(Number(e.target.value))}
-                 className="w-full p-3 bg-blue-50 border border-blue-200 text-blue-800 font-bold rounded-lg outline-none focus:bg-white focus:border-blue-500 transition-colors" 
+                 className="w-full p-3 bg-blue-50 border border-blue-200 text-blue-900 font-black rounded-lg outline-none focus:bg-white focus:border-blue-500 transition-colors" 
               />
            </div>
         </div>
@@ -176,7 +180,7 @@ export default function FormularioPrestamo() {
         </div>
         <div className="mt-3 text-center border-t border-blue-100 pt-2">
             <p className="text-xs text-blue-500">
-               El crédito durará aprox: <strong>{calculo.tiempo}</strong>
+                El crédito durará aprox: <strong>{calculo.tiempo}</strong>
             </p>
         </div>
       </div>
