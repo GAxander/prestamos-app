@@ -2,9 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { eliminarCliente, obtenerDatosParaBackup } from '@/app/actions' // <-- Importamos la nueva función
+import { eliminarCliente, obtenerDatosParaBackup } from '@/app/actions' 
 
-// NUEVO TIPO DE DATO AGRUPADO
 export type GrupoDeuda = {
   prestamoId: number
   clienteNombre: string
@@ -47,34 +46,23 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
     }
   }
 
-  // --- FUNCIÓN PARA DESCARGAR EL EXCEL ---
   const handleDescargarBackup = async () => {
     try {
       setDescargando(true)
-      
-      // 1. Traemos la información fresca de la base de datos
       const datos = await obtenerDatosParaBackup()
-      
-      // 2. Importamos la librería Excel SOLO cuando se necesita (Optimización)
       const XLSX = await import('xlsx')
-      
-      // 3. Creamos un libro de Excel en blanco
       const wb = XLSX.utils.book_new()
       
-      // 4. Convertimos nuestros datos a "Hojas" de Excel
       const wsClientes = XLSX.utils.json_to_sheet(datos.clientes)
       const wsPrestamos = XLSX.utils.json_to_sheet(datos.prestamos)
       const wsPagos = XLSX.utils.json_to_sheet(datos.pagos)
       
-      // 5. Metemos las hojas al libro
       XLSX.utils.book_append_sheet(wb, wsClientes, "Clientes")
       XLSX.utils.book_append_sheet(wb, wsPrestamos, "Préstamos")
       XLSX.utils.book_append_sheet(wb, wsPagos, "Pagos")
       
-      // 6. Descargamos el archivo con la fecha de hoy
       const fechaHoy = new Date().toISOString().split('T')[0]
       XLSX.writeFile(wb, `Backup_Sistema_Prestamos_${fechaHoy}.xlsx`)
-      
     } catch (error) {
       alert("Hubo un error al generar el Excel.")
     } finally {
@@ -82,10 +70,15 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
     }
   }
 
+  // 👇 NUEVA FUNCIÓN: Para deslizarse suavemente hacia abajo
+  const irACartera = () => {
+    document.getElementById('seccion-cartera')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-20">
       
-      {/* HEADER CON NUEVO BOTÓN */}
+      {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <div>
            <h1 className="text-2xl font-black text-gray-800 flex items-center gap-2">
@@ -94,7 +87,6 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Panel de Control</p>
         </div>
         <div className="flex gap-2">
-          {/* 👇 NUEVO BOTÓN DE BACKUP */}
           <button 
             onClick={handleDescargarBackup}
             disabled={descargando}
@@ -123,13 +115,17 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
           <div className="absolute -right-4 -bottom-4 text-indigo-700 opacity-20 text-6xl">📠</div>
         </Link>
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+        {/* 👇 CAMBIAMOS ESTE DIV POR UN BOTÓN CON ONCLICK */}
+        <button 
+          onClick={irACartera}
+          className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center text-left hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+        >
           <div>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Clientes Activos</p>
-            <p className="text-3xl font-black text-gray-800">{totalClientesActivos}</p>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1 group-hover:text-blue-500 transition-colors">Clientes Activos</p>
+            <p className="text-3xl font-black text-gray-800 group-hover:text-blue-600 transition-colors">{totalClientesActivos}</p>
           </div>
-          <div className="text-3xl opacity-20 text-gray-400">👥</div>
-        </div>
+          <div className="text-3xl opacity-20 text-gray-400 group-hover:opacity-40 group-hover:text-blue-500 transition-all">👥</div>
+        </button>
 
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
           <div>
@@ -140,10 +136,9 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
         </div>
       </div>
 
-      {/* --- AGENDA AGRUPADA --- */}
+      {/* AGENDA AGRUPADA (Sin cambios) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        
-        {/* VENCIDOS (ROJO) */}
+        {/* VENCIDOS */}
         <div className="bg-red-50 rounded-xl border border-red-100 overflow-hidden flex flex-col max-h-80">
             <div className="px-4 py-3 border-b border-red-100 flex justify-between items-center bg-red-100/50">
                 <h3 className="text-xs font-bold text-red-700 uppercase flex items-center gap-2">
@@ -179,7 +174,7 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
             </div>
         </div>
 
-        {/* PRÓXIMOS (AMARILLO) */}
+        {/* PRÓXIMOS */}
         <div className="bg-yellow-50 rounded-xl border border-yellow-100 overflow-hidden flex flex-col max-h-80">
             <div className="px-4 py-3 border-b border-yellow-100 flex justify-between items-center bg-yellow-100/50">
                 <h3 className="text-xs font-bold text-yellow-700 uppercase flex items-center gap-2">
@@ -217,11 +212,11 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                 )}
             </div>
         </div>
-
       </div>
 
       {/* LISTA CLIENTES */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[500px]">
+      {/* 👇 LE PUSIMOS EL id="seccion-cartera" A ESTE CONTENEDOR */}
+      <div id="seccion-cartera" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[500px]">
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
           <h2 className="font-bold text-gray-700">Cartera de Clientes ({clientesFiltrados.length})</h2>
         </div>
