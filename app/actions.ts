@@ -48,7 +48,7 @@ export async function cerrarSesion() {
 export async function crearPrestamo(formData: FormData) {
   const userId = await verificarSesion()
   
-  // 👇 NUEVO: Atrapamos el ID oculto que nos manda el formulario inteligente
+  // Atrapamos el ID oculto que nos manda el formulario inteligente
   const clienteIdForm = formData.get('clienteId') as string 
   
   const nombre = formData.get('nombre') as string
@@ -56,9 +56,12 @@ export async function crearPrestamo(formData: FormData) {
   const monto = Number(formData.get('monto'))
   const interesMensual = Number(formData.get('interes')) 
   const numeroCuotas = Number(formData.get('cuotas')) 
-  const frecuencia = formData.get('frecuencia') as 'DIARIO' | 'SEMANAL' | 'QUINCENAL' | 'MEN কমপক্ষেMENSUAL'
+  const frecuencia = formData.get('frecuencia') as 'DIARIO' | 'SEMANAL' | 'QUINCENAL' | 'MENSUAL'
   const fechaInicio = new Date(formData.get('fechaInicio') as string)
   const moraDiaria = Number(formData.get('moraDiaria') || 0)
+
+  // 👇 NUEVO: Atrapamos la opción de cómo cobrar el mes
+  const tipoMensual = formData.get('tipoMensual') as string || '30_DIAS'
 
   // Validaciones básicas
   if (!nombre || monto <= 0 || numeroCuotas <= 0) {
@@ -66,7 +69,7 @@ export async function crearPrestamo(formData: FormData) {
   }
 
   // ------------------------------------------------------------------
-  // 🧠 NUEVA LÓGICA INTELIGENTE DE CLIENTE
+  // 🧠 LÓGICA INTELIGENTE DE CLIENTE
   // ------------------------------------------------------------------
   let clienteIdFinal: number
 
@@ -114,7 +117,7 @@ export async function crearPrestamo(formData: FormData) {
   let diasPorCuota = 1
   if (frecuencia === 'SEMANAL') diasPorCuota = 7
   if (frecuencia === 'QUINCENAL') diasPorCuota = 15
-  if (frecuencia === 'MENSUAL') diasPorCuota = 30
+  if (frecuencia === 'MENSUAL') diasPorCuota = 30 // Para cálculos financieros, asumimos 30
 
   // 2. Calcular la duración total del préstamo en días
   const duracionTotalDias = numeroCuotas * diasPorCuota
@@ -134,8 +137,15 @@ export async function crearPrestamo(formData: FormData) {
   fechaActual.setHours(12, 0, 0, 0)
 
   for (let i = 1; i <= numeroCuotas; i++) {
-    // Sumamos los días según la frecuencia
-    fechaActual.setDate(fechaActual.getDate() + diasPorCuota)
+    
+    // 👇 NUEVA LÓGICA DE FECHAS PARA MENSUALIDADES FIJAS O DE 30 DÍAS
+    if (frecuencia === 'MENSUAL' && tipoMensual === 'FECHA_FIJA') {
+      // Suma 1 mes calendario exacto (respeta los días 15, 30, 31, etc.)
+      fechaActual.setMonth(fechaActual.getMonth() + 1)
+    } else {
+      // Suma los días exactos (ej. 7, 15, o 30)
+      fechaActual.setDate(fechaActual.getDate() + diasPorCuota)
+    }
     
     cuotas.push({
       numero: i,
@@ -147,7 +157,6 @@ export async function crearPrestamo(formData: FormData) {
   // Guardar en Base de Datos
   await prisma.prestamo.create({
     data: {
-      // 👇 USAMOS EL ID FINAL QUE CALCULAMOS ARRIBA
       clienteId: clienteIdFinal, 
       montoCapital: monto,
       interesPorcentaje: interesMensual,
