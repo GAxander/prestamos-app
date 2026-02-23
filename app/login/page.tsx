@@ -22,10 +22,15 @@ function LoginForm() {
       } else {
         await login(formData)
       }
-    } catch (e) {
+    } catch (e: any) {
+      // 1. Verificamos si es el error "fantasma" de redirección de Next.js
+      if (e?.message === 'NEXT_REDIRECT' || e?.digest?.startsWith('NEXT_REDIRECT')) {
+        throw e; // Lo volvemos a lanzar para que Next.js cambie de página tranquilo
+      }
+      
+      // 2. Si llega hasta aquí, SÍ es un error real de contraseña o usuario
       setError('Datos incorrectos o usuario ya existe')
-    } finally {
-      setLoading(false)
+      setLoading(false) // Solo quitamos el "Cargando..." si hubo un error de verdad
     }
   }
 
