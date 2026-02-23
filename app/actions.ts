@@ -649,33 +649,90 @@ export async function eliminarCliente(clienteId: number) {
   revalidatePath('/')
 }
 
-// --- FUNCIÓN PARA BACKUP EN EXCEL ---
+// --- FUNCIÓN PARA BACKUP EN EXCEL (VERSIÓN MEJORADA) ---
 export async function obtenerDatosParaBackup() {
   const userId = await verificarSesion()
 
-  // 1. Extraer Clientes
-  const clientes = await prisma.cliente.findMany({
+  // 1. Extraer Clientes con todos sus Préstamos y Pagos anidados
+  const clientesRaw = await prisma.cliente.findMany({
     where: { usuarioId: userId },
-    select: { id: true, nombre: true, telefono: true, createdAt: true },
-    orderBy: { id: 'asc' }
+    include: {
+      prestamos: {
+        include: { pagos: true }
+      }
+    },
+    orderBy: { nombre: 'asc' }
   })
 
-  // 2. Extraer Préstamos
+  // 2. Crear un "Resumen de Cartera" para la primera pestaña del Excel
+  const resumenClientes = clientesRaw.map(cliente => {
+    let totalPrestado = 0
+    let totalPagado = 0
+
+    cliente.prestamos.forEach(p => {
+      // Calculamos la deuda total de cada préstamo
+      let diasPorCuota = 1
+      if (p.frecuencia === 'SEMANAL') diasPorCuota = 7
+      if (p.frecuencia === 'QUINCENAL') diasPorCuota = 15
+      if (p.frecuencia === 'MENSUAL') diasPorCuota = 30
+
+      const duracionDias = p.plazo * diasPorCuota
+      const ganancia = Number(p.montoCapital) * (Number(p.interesPorcentaje) / 100) * (duracionDias / 30)
+      const totalAPagar = Number(p.montoCapital) + ganancia
+
+      totalPrestado += totalAPagar
+
+      // Sumamos todo lo que ha pagado
+      p.pagos.forEach(pago => {
+        totalPagado += Number(pago.monto)
+      })
+    })
+
+    return {
+      "ID": cliente.id,
+      "Cliente": cliente.nombre,
+      "Teléfono": cliente.telefono || 'Sin número',
+      "Préstamos Activos": cliente.prestamos.filter(p => p.estado === 'ACTIVO').length,
+      "Total con Intereses (S/)": Number(totalPrestado.toFixed(2)),
+      "Total Pagado (S/)": Number(totalPagado.toFixed(2)),
+      "Deuda Pendiente (S/)": Number((totalPrestado - totalPagado).toFixed(2)),
+      "Fecha Registro": cliente.createdAt.toLocaleDateString('es-PE')
+    }
+  })
+
+  // 3. Extraer Préstamos (Con el nombre del cliente en vez de un ID feo)
   const prestamos = await prisma.prestamo.findMany({
     where: { cliente: { usuarioId: userId } },
-    select: { 
-      id: true, clienteId: true, montoCapital: true, interesPorcentaje: true, 
-      frecuencia: true, plazo: true, estado: true, fechaInicio: true 
-    },
-    orderBy: { id: 'asc' }
-  })
+    include: { cliente: true }, 
+    orderBy: { fechaInicio: 'desc' }
+  }).then(res => res.map(p => ({
+    "Préstamo #": p.id,
+    "Cliente": p.cliente.nombre,
+    "Capital (S/)": Number(p.montoCapital),
+    "Interés (%)": Number(p.interesPorcentaje),
+    "Frecuencia": p.frecuencia,
+    "Cuotas": p.plazo,
+    "Estado": p.estado,
+    "Fecha Inicio": p.fechaInicio.toLocaleDateString('es-PE')
+  })))
 
-  // 3. Extraer Pagos
+  // 4. Extraer Historial de Pagos (Con nombre de cliente)
   const pagos = await prisma.pago.findMany({
     where: { prestamo: { cliente: { usuarioId: userId } } },
-    select: { id: true, prestamoId: true, monto: true, tipo: true, fecha: true },
+    include: { prestamo: { include: { cliente: true } } },
     orderBy: { fecha: 'desc' }
-  })
+  }).then(res => res.map(p => ({
+    "Pago #": p.id,
+    "Cliente": p.prestamo.cliente.nombre,
+    "Préstamo #": p.prestamoId,
+    "Monto Pagado (S/)": Number(p.monto),
+    "Fecha": p.fecha.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+  })))
 
-  return { clientes, prestamos, pagos }
+  // Retornamos la info ya masticada para el Excel
+  return { 
+    clientes: resumenClientes, 
+    prestamos: prestamos, 
+    pagos: pagos 
+  }
 }
