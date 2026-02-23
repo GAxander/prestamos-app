@@ -649,3 +649,33 @@ export async function eliminarCliente(clienteId: number) {
   revalidatePath('/')
 }
 
+// --- FUNCIÓN PARA BACKUP EN EXCEL ---
+export async function obtenerDatosParaBackup() {
+  const userId = await verificarSesion()
+
+  // 1. Extraer Clientes
+  const clientes = await prisma.cliente.findMany({
+    where: { usuarioId: userId },
+    select: { id: true, nombre: true, telefono: true, createdAt: true },
+    orderBy: { id: 'asc' }
+  })
+
+  // 2. Extraer Préstamos
+  const prestamos = await prisma.prestamo.findMany({
+    where: { cliente: { usuarioId: userId } },
+    select: { 
+      id: true, clienteId: true, montoCapital: true, interesPorcentaje: true, 
+      frecuencia: true, plazo: true, estado: true, fechaInicio: true 
+    },
+    orderBy: { id: 'asc' }
+  })
+
+  // 3. Extraer Pagos
+  const pagos = await prisma.pago.findMany({
+    where: { prestamo: { cliente: { usuarioId: userId } } },
+    select: { id: true, prestamoId: true, monto: true, tipo: true, fecha: true },
+    orderBy: { fecha: 'desc' }
+  })
+
+  return { clientes, prestamos, pagos }
+}

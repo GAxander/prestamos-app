@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { eliminarCliente } from '@/app/actions' 
+import { eliminarCliente, obtenerDatosParaBackup } from '@/app/actions' // <-- Importamos la nueva función
 
 // NUEVO TIPO DE DATO AGRUPADO
 export type GrupoDeuda = {
@@ -31,12 +31,12 @@ type Props = {
 
 export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalClientesActivos, vencidos, porVencer }: Props) {
   const [busqueda, setBusqueda] = useState('')
+  const [descargando, setDescargando] = useState(false)
 
   const clientesFiltrados = clientes.filter(c => 
     c.nombre.toLowerCase().includes(busqueda.toLowerCase())
   )
 
-  // --- FUNCIÓN PARA BORRAR CLIENTE ---
   const handleBorrarCliente = async (id: number, nombre: string) => {
     const confirmado = window.confirm(
       `¿Estás seguro de eliminar a ${nombre}?\n\n⚠️ SE BORRARÁN TODOS SUS PRÉSTAMOS, PAGOS Y DEUDAS.\n\nEsta acción no se puede deshacer.`
@@ -47,10 +47,45 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
     }
   }
 
+  // --- FUNCIÓN PARA DESCARGAR EL EXCEL ---
+  const handleDescargarBackup = async () => {
+    try {
+      setDescargando(true)
+      
+      // 1. Traemos la información fresca de la base de datos
+      const datos = await obtenerDatosParaBackup()
+      
+      // 2. Importamos la librería Excel SOLO cuando se necesita (Optimización)
+      const XLSX = await import('xlsx')
+      
+      // 3. Creamos un libro de Excel en blanco
+      const wb = XLSX.utils.book_new()
+      
+      // 4. Convertimos nuestros datos a "Hojas" de Excel
+      const wsClientes = XLSX.utils.json_to_sheet(datos.clientes)
+      const wsPrestamos = XLSX.utils.json_to_sheet(datos.prestamos)
+      const wsPagos = XLSX.utils.json_to_sheet(datos.pagos)
+      
+      // 5. Metemos las hojas al libro
+      XLSX.utils.book_append_sheet(wb, wsClientes, "Clientes")
+      XLSX.utils.book_append_sheet(wb, wsPrestamos, "Préstamos")
+      XLSX.utils.book_append_sheet(wb, wsPagos, "Pagos")
+      
+      // 6. Descargamos el archivo con la fecha de hoy
+      const fechaHoy = new Date().toISOString().split('T')[0]
+      XLSX.writeFile(wb, `Backup_Sistema_Prestamos_${fechaHoy}.xlsx`)
+      
+    } catch (error) {
+      alert("Hubo un error al generar el Excel.")
+    } finally {
+      setDescargando(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-20">
       
-      {/* HEADER */}
+      {/* HEADER CON NUEVO BOTÓN */}
       <div className="flex justify-between items-center mb-6">
         <div>
            <h1 className="text-2xl font-black text-gray-800 flex items-center gap-2">
@@ -58,9 +93,21 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
            </h1>
            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Panel de Control</p>
         </div>
-        <Link href="/nuevo-prestamo" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-transform active:scale-95 text-sm flex items-center gap-1">
-          <span>+ Nuevo</span>
-        </Link>
+        <div className="flex gap-2">
+          {/* 👇 NUEVO BOTÓN DE BACKUP */}
+          <button 
+            onClick={handleDescargarBackup}
+            disabled={descargando}
+            className="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded-lg font-bold shadow-sm transition-transform active:scale-95 text-sm flex items-center gap-1 disabled:opacity-50"
+            title="Descargar respaldo en Excel"
+          >
+            {descargando ? '⏳' : '📥 Backup'}
+          </button>
+
+          <Link href="/nuevo-prestamo" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-transform active:scale-95 text-sm flex items-center gap-1">
+            <span>+ Nuevo</span>
+          </Link>
+        </div>
       </div>
 
       {/* KPI CARDS */}
@@ -182,7 +229,6 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
         <div className="p-4 border-b border-gray-100">
           <div className="relative">
             <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
-            {/* 👇 AQUÍ AGREGAMOS LAS CLASES DE COLOR OSCURO */}
             <input 
               type="text"
               placeholder="Buscar cliente por nombre..."
@@ -203,7 +249,6 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                 <div key={cliente.id} className="p-4 hover:bg-blue-50 transition group">
                   <div className="flex justify-between items-start">
                     
-                    {/* ENLACE PRINCIPAL AL DETALLE */}
                     <Link href={`/cliente/${cliente.id}`} className="block flex-1">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm ${tieneDeuda ? 'bg-blue-600' : 'bg-gray-300'}`}>
@@ -216,9 +261,7 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                       </div>
                     </Link>
 
-                    {/* LADO DERECHO: PRÉSTAMOS Y BOTÓN BORRAR */}
                     <div className="text-right flex flex-col items-end gap-2">
-                       {/* BOTÓN BORRAR CLIENTE */}
                        <button
                           onClick={() => handleBorrarCliente(cliente.id, cliente.nombre)}
                           className="text-gray-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-colors"
@@ -227,7 +270,6 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                           🗑️
                         </button>
 
-                       {/* ETIIQUETAS DE PRÉSTAMOS */}
                        {tieneDeuda ? (
                          <div className="flex flex-col gap-1 items-end">
                             {cliente.prestamos.map((p: any) => (
