@@ -1,6 +1,6 @@
 'use client' // Importante para la interactividad
 
-import { useState, useEffect, use } from 'react' // Importamos 'use'
+import { useState, useEffect, use } from 'react' 
 import { procesarRenovacion } from '@/app/actions'
 import Link from 'next/link'
 
@@ -9,25 +9,14 @@ export default function RenovarPage(props: { params: Promise<{ id: string }> }) 
   const params = use(props.params);
   const id = Number(params.id);
 
-  // ESTADOS DEL CLIENTE (Simulamos fetch rápido o podrías pasarlo como prop si prefieres server component mixto)
-  // Para hacerlo simple y rápido visualmente, asumiremos que traemos la deuda como prop o hacemos un fetch client side
-  // PERO, para no complicar tu estructura, vamos a usar un truco:
-  // Como es un Client Component, no podemos hacer prisma.findUnique aquí directo.
-  // Lo ideal es recibir los datos desde un Server Component padre o pasarlos.
-  // *Por ahora, pondremos un deuda estática o un fetch effect.*
-  
-  // NOTA: Para que esto funcione perfecto, este archivo debería recibir la deuda actual.
-  // Asumiré que me pasas la deuda actual en la URL o hacemos un fetch.
-  // Para este ejemplo, pondré un input manual de "Deuda Actual" que se puede pre-llenar.
-  
-  const [deudaActual, setDeudaActual] = useState(0) // Esto se debería cargar de la DB
+  const [deudaActual, setDeudaActual] = useState(0) 
   const [nombreCliente, setNombreCliente] = useState("Cargando...")
 
   // ESTADOS DEL FORMULARIO
   const [pagoHoy, setPagoHoy] = useState(0)
   const [aumentoCapital, setAumentoCapital] = useState(0)
   const [nuevoInteres, setNuevoInteres] = useState(10)
-  const [nuevasCuotas, setNuevasCuotas] = useState(1) // Default
+  const [nuevasCuotas, setNuevasCuotas] = useState(1) 
   const [nuevaFrecuencia, setNuevaFrecuencia] = useState('MENSUAL')
   const [moraDiaria, setMoraDiaria] = useState(0)
 
@@ -40,18 +29,9 @@ export default function RenovarPage(props: { params: Promise<{ id: string }> }) 
     tiempoEstimado: ''
   })
 
-  // EFECTO: Cargar datos del préstamo (Simulado fetch a una API interna o Server Action)
+  // EFECTO: Cargar datos del préstamo 
   useEffect(() => {
-    // Aquí idealmente llamarías a una Server Action que te de los datos del préstamo ID
-    // Por simplicidad, asumiremos que el usuario ve la deuda arriba.
-    // Si quieres hacerlo 100% real, necesitamos crear una función 'obtenerPrestamo(id)' en actions.ts
-    // y llamarla aquí.
-    
-    // Simulación:
-    // obtenerPrestamo(id).then(data => { setDeudaActual(data.saldo); setNombreCliente(data.cliente) })
-    
-    // Por ahora, permite editar la deuda actual manualmente si no carga
-    setDeudaActual(660) // Valor de ejemplo de tu imagen
+    setDeudaActual(660) 
     setNombreCliente("Cliente")
   }, [id])
 
@@ -119,7 +99,7 @@ export default function RenovarPage(props: { params: Promise<{ id: string }> }) 
                         type="number" 
                         value={deudaActual} 
                         onChange={e => setDeudaActual(Number(e.target.value))}
-                        className="bg-transparent text-2xl font-black text-gray-800 outline-none w-full"
+                        className="bg-transparent text-2xl font-black text-gray-900 outline-none w-full"
                     />
                 </div>
                 <p className="text-[10px] text-gray-400 mt-1">* Esta es la base para el nuevo cálculo.</p>
@@ -134,7 +114,7 @@ export default function RenovarPage(props: { params: Promise<{ id: string }> }) 
                         type="number" 
                         value={pagoHoy}
                         onChange={e => setPagoHoy(Number(e.target.value))}
-                        className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none font-bold text-green-600 focus:border-green-500" 
+                        className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none font-bold text-green-600 focus:border-green-500 placeholder:text-green-300" 
                     />
                 </div>
                 <div>
@@ -144,7 +124,7 @@ export default function RenovarPage(props: { params: Promise<{ id: string }> }) 
                         type="number" 
                         value={aumentoCapital}
                         onChange={e => setAumentoCapital(Number(e.target.value))}
-                        className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none font-bold text-blue-600 focus:border-blue-500" 
+                        className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none font-bold text-blue-600 focus:border-blue-500 placeholder:text-blue-300" 
                     />
                 </div>
             </div>
@@ -156,11 +136,12 @@ export default function RenovarPage(props: { params: Promise<{ id: string }> }) 
                 <div className="grid grid-cols-2 gap-4">
                      <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">Frecuencia</label>
+                        {/* 👇 TEXTO OSCURO AQUÍ */}
                         <select 
                             name="nuevaFrecuencia" 
                             value={nuevaFrecuencia}
                             onChange={e => setNuevaFrecuencia(e.target.value)}
-                            className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none"
+                            className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none text-gray-900 font-medium"
                         >
                             <option value="DIARIO">Diario</option>
                             <option value="SEMANAL">Semanal</option>
@@ -170,12 +151,13 @@ export default function RenovarPage(props: { params: Promise<{ id: string }> }) 
                      </div>
                      <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">N° Cuotas</label>
+                        {/* 👇 TEXTO OSCURO AQUÍ */}
                         <input 
                             name="nuevasCuotas" 
                             type="number" 
                             value={nuevasCuotas}
                             onChange={e => setNuevasCuotas(Number(e.target.value))}
-                            className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none" 
+                            className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none text-gray-900 font-medium placeholder:text-gray-400" 
                         />
                      </div>
                 </div>
@@ -183,23 +165,25 @@ export default function RenovarPage(props: { params: Promise<{ id: string }> }) 
                 <div className="grid grid-cols-2 gap-4">
                      <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">Interés Mensual (%)</label>
+                        {/* 👇 TEXTO OSCURO AQUÍ */}
                         <input 
                             name="nuevoInteres" 
                             type="number" 
                             value={nuevoInteres}
                             onChange={e => setNuevoInteres(Number(e.target.value))}
-                            className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none" 
+                            className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none text-gray-900 font-medium placeholder:text-gray-400" 
                         />
                      </div>
                      <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">Mora x Día (Auto)</label>
+                        {/* 👇 TEXTO OSCURO AQUÍ (Cambiado de gray-500 a gray-900) */}
                         <input 
                             name="moraDiaria" 
                             type="number" 
                             step="0.01"
                             value={moraDiaria}
                             onChange={e => setMoraDiaria(Number(e.target.value))}
-                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg outline-none text-gray-500" 
+                            className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg outline-none text-gray-900 font-medium placeholder:text-gray-400" 
                         />
                      </div>
                 </div>
