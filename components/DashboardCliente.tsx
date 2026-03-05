@@ -32,8 +32,19 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
   const [busqueda, setBusqueda] = useState('')
   const [descargando, setDescargando] = useState(false)
 
+  // 1. Filtro de clientes
   const clientesFiltrados = clientes.filter(c => 
     c.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  )
+
+  // 👇 2. NUEVO: Ordenamos los Morosos (El más atrasado primero)
+  const vencidosOrdenados = [...vencidos].sort((a, b) => 
+    new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime()
+  )
+
+  // 👇 3. NUEVO: Ordenamos los Próximos (El más cercano a la fecha de hoy primero)
+  const porVencerOrdenados = [...porVencer].sort((a, b) => 
+    new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime()
   )
 
   const handleBorrarCliente = async (id: number, nombre: string) => {
@@ -70,7 +81,6 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
     }
   }
 
-  // 👇 NUEVA FUNCIÓN: Para deslizarse suavemente hacia abajo
   const irACartera = () => {
     document.getElementById('seccion-cartera')?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -115,7 +125,6 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
           <div className="absolute -right-4 -bottom-4 text-indigo-700 opacity-20 text-6xl">📠</div>
         </Link>
 
-        {/* 👇 CAMBIAMOS ESTE DIV POR UN BOTÓN CON ONCLICK */}
         <button 
           onClick={irACartera}
           className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center text-left hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
@@ -136,20 +145,22 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
         </div>
       </div>
 
-      {/* AGENDA AGRUPADA (Sin cambios) */}
+      {/* --- AGENDA AGRUPADA --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        {/* VENCIDOS */}
+        
+        {/* VENCIDOS (ROJO) */}
         <div className="bg-red-50 rounded-xl border border-red-100 overflow-hidden flex flex-col max-h-80">
             <div className="px-4 py-3 border-b border-red-100 flex justify-between items-center bg-red-100/50">
                 <h3 className="text-xs font-bold text-red-700 uppercase flex items-center gap-2">
-                   🚨 Vencidos ({vencidos.length} casos)
+                   🚨 Vencidos ({vencidosOrdenados.length} casos)
                 </h3>
             </div>
             <div className="divide-y divide-red-100 overflow-y-auto">
-                {vencidos.length === 0 ? (
+                {/* 👇 AQUI CAMBIAMOS vencidos.map POR vencidosOrdenados.map */}
+                {vencidosOrdenados.length === 0 ? (
                     <p className="text-xs text-red-300 p-4 text-center italic">¡Genial! No hay morosos hoy.</p>
                 ) : (
-                    vencidos.map((item) => (
+                    vencidosOrdenados.map((item) => (
                         <div key={item.prestamoId} className="p-3 hover:bg-red-100 transition flex justify-between items-center group">
                             <div>
                                 <p className="text-sm font-bold text-gray-800">{item.clienteNombre}</p>
@@ -174,7 +185,7 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
             </div>
         </div>
 
-        {/* PRÓXIMOS */}
+        {/* PRÓXIMOS (AMARILLO) */}
         <div className="bg-yellow-50 rounded-xl border border-yellow-100 overflow-hidden flex flex-col max-h-80">
             <div className="px-4 py-3 border-b border-yellow-100 flex justify-between items-center bg-yellow-100/50">
                 <h3 className="text-xs font-bold text-yellow-700 uppercase flex items-center gap-2">
@@ -182,10 +193,11 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                 </h3>
             </div>
             <div className="divide-y divide-yellow-100 overflow-y-auto">
-                {porVencer.length === 0 ? (
+                {/* 👇 AQUI CAMBIAMOS porVencer.map POR porVencerOrdenados.map */}
+                {porVencerOrdenados.length === 0 ? (
                     <p className="text-xs text-yellow-600 p-4 text-center italic">No hay cobros próximos.</p>
                 ) : (
-                    porVencer.map((item) => {
+                    porVencerOrdenados.map((item) => {
                         const esHoy = new Date(item.fechaVencimiento).setHours(0,0,0,0) === new Date().setHours(0,0,0,0)
                         return (
                             <div key={item.prestamoId} className="p-3 hover:bg-yellow-100 transition flex justify-between items-center">
@@ -212,10 +224,10 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                 )}
             </div>
         </div>
+
       </div>
 
       {/* LISTA CLIENTES */}
-      {/* 👇 LE PUSIMOS EL id="seccion-cartera" A ESTE CONTENEDOR */}
       <div id="seccion-cartera" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[500px]">
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
           <h2 className="font-bold text-gray-700">Cartera de Clientes ({clientesFiltrados.length})</h2>
