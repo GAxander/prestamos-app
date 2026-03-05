@@ -279,10 +279,10 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
 
                        {tieneDeuda ? (
                          <div className="flex flex-col gap-1 items-end">
-                            {cliente.prestamos.map((p: any) => (
+                            {cliente.prestamos.map((p: any, index: number) => (
                               <Link key={p.id} href={`/prestamo/${p.id}`} className="block">
                                 <span className="inline-block px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold rounded border border-green-200 hover:bg-green-100 cursor-pointer">
-                                  Préstamo #{p.id} (Activo)
+                                  {p.montoCapital ? `S/ ${Number(p.montoCapital).toFixed(2)} (Activo)` : `Préstamo ${index + 1} (Activo)`}
                                 </span>
                               </Link>
                             ))}
