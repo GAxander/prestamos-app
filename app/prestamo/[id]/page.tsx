@@ -146,19 +146,24 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
              </div>
           </div>
 
-          {/* 👇 NUEVA SECCIÓN: Resumen del Negocio (Fila 2) */}
-          <div className="grid grid-cols-3 gap-2 text-center divide-x divide-gray-200">
+          {/* 👇 AHORA SON 4 COLUMNAS: Agregamos "Fecha Inicio" al principio */}
+          <div className="grid grid-cols-4 gap-2 text-center divide-x divide-gray-200">
+             <div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Inicio</p>
+                {/* Lo formateamos para que se vea corto (Ej: 15 ago. 2024) */}
+                <p className="text-xs font-black text-gray-700">{prestamo.fechaInicio.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+             </div>
              <div>
                 <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Capital</p>
-                <p className="text-sm font-black text-gray-700">S/ {Number(prestamo.montoCapital).toFixed(2)}</p>
+                <p className="text-xs font-black text-gray-700">S/ {Number(prestamo.montoCapital).toFixed(2)}</p>
              </div>
              <div>
                 <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Interés</p>
-                <p className="text-sm font-black text-gray-700">{Number(prestamo.interesPorcentaje)}% <span className="text-[9px] font-normal text-gray-400">mens.</span></p>
+                <p className="text-xs font-black text-gray-700">{Number(prestamo.interesPorcentaje)}% <span className="text-[9px] font-normal text-gray-400">mens.</span></p>
              </div>
              <div>
                 <p className="text-[10px] text-green-600 font-bold uppercase mb-0.5">Ganancia</p>
-                <p className="text-sm font-black text-green-600">S/ {gananciaTotal.toFixed(2)}</p>
+                <p className="text-xs font-black text-green-600">S/ {gananciaTotal.toFixed(2)}</p>
              </div>
           </div>
 
