@@ -112,15 +112,15 @@ export async function crearPrestamo(formData: FormData) {
   const cuotas = []
 
   for (let i = 1; i <= numeroCuotas; i++) {
-    // 👇 SIEMPRE clonamos la fecha inicial original para no perder el día exacto
+    // Siempre clonamos la fecha inicial original para no perder el día exacto
     let fechaVencimiento = new Date(fechaInicio)
     fechaVencimiento.setHours(12, 0, 0, 0)
     
     if (frecuencia === 'MENSUAL' && tipoMensual === 'FECHA_FIJA') {
-      // Sumamos la cantidad de meses directamente a la fecha raíz (Ej: +1 mes, +2 meses, +3 meses)
+      // Sumamos la cantidad de meses directamente a la fecha raíz
       fechaVencimiento.setMonth(fechaVencimiento.getMonth() + i)
     } else {
-      // Sumamos los días exactos acumulados (Ej: +7 dias, +14 dias, +21 dias)
+      // Sumamos los días exactos acumulados
       fechaVencimiento.setDate(fechaVencimiento.getDate() + (diasPorCuota * i))
     }
     
@@ -152,9 +152,7 @@ export async function crearPrestamo(formData: FormData) {
     }
   })
 
-  import { revalidatePath } from 'next/cache'
-  import { redirect } from 'next/navigation'
-  
+  // Los imports ya no están aquí abajo, asumimos que están en la línea 1 de tu archivo :)
   revalidatePath('/')
   redirect('/')
 }
