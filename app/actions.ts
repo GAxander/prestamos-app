@@ -48,9 +48,7 @@ export async function cerrarSesion() {
 export async function crearPrestamo(formData: FormData) {
   const userId = await verificarSesion()
   
-  // Atrapamos el ID oculto que nos manda el formulario inteligente
   const clienteIdForm = formData.get('clienteId') as string 
-  
   const nombre = formData.get('nombre') as string
   const telefono = formData.get('telefono') as string
   const monto = Number(formData.get('monto'))
@@ -60,10 +58,8 @@ export async function crearPrestamo(formData: FormData) {
   const fechaInicio = new Date(formData.get('fechaInicio') as string)
   const moraDiaria = Number(formData.get('moraDiaria') || 0)
 
-  // 👇 NUEVO: Atrapamos la opción de cómo cobrar el mes
   const tipoMensual = formData.get('tipoMensual') as string || '30_DIAS'
 
-  // Validaciones básicas
   if (!nombre || monto <= 0 || numeroCuotas <= 0) {
     throw new Error("Datos inválidos")
   }
@@ -74,82 +70,63 @@ export async function crearPrestamo(formData: FormData) {
   let clienteIdFinal: number
 
   if (clienteIdForm) {
-    // CASO A: El usuario seleccionó un cliente de la lista desplegable
     clienteIdFinal = Number(clienteIdForm)
-    
-    // De paso, actualizamos su teléfono en la base de datos por si lo editaron
     await prisma.cliente.update({
       where: { id: clienteIdFinal },
       data: { telefono }
     })
   } else {
-    // CASO B: Es un cliente nuevo (o escribieron el nombre sin hacer clic en la lista)
-    // Primero verificamos por nombre por si acaso, para no duplicar
     let cliente = await prisma.cliente.findFirst({ 
-      where: { 
-        nombre: nombre,
-        usuarioId: userId 
-      } 
+      where: { nombre: nombre, usuarioId: userId } 
     })
     
     if (cliente) {
       clienteIdFinal = cliente.id
-      // Actualizamos teléfono
       await prisma.cliente.update({
         where: { id: clienteIdFinal },
         data: { telefono }
       })
     } else {
-      // Definitivamente es nuevo, lo creamos de cero
       const nuevoCliente = await prisma.cliente.create({ 
-        data: { 
-          nombre, 
-          telefono,
-          usuarioId: userId
-        } 
+        data: { nombre, telefono, usuarioId: userId } 
       })
       clienteIdFinal = nuevoCliente.id
     }
   }
-  // ------------------------------------------------------------------
 
-  // 1. Determinar cuántos días dura cada cuota
+  // 1. Determinar días por cuota
   let diasPorCuota = 1
   if (frecuencia === 'SEMANAL') diasPorCuota = 7
   if (frecuencia === 'QUINCENAL') diasPorCuota = 15
-  if (frecuencia === 'MENSUAL') diasPorCuota = 30 // Para cálculos financieros, asumimos 30
+  if (frecuencia === 'MENSUAL') diasPorCuota = 30 
 
-  // 2. Calcular la duración total del préstamo en días
+  // 2. Calcular duraciones e intereses
   const duracionTotalDias = numeroCuotas * diasPorCuota
-
-  // 3. Calcular el Interés Proporcional
   const gananciaInteres = monto * (interesMensual / 100) * (duracionTotalDias / 30)
-
-  // 4. Calcular montos
   const totalAPagar = monto + gananciaInteres
   const montoPorCuota = totalAPagar / numeroCuotas
 
-  // Generar el array de cuotas
+  // ------------------------------------------------------------------
+  // 🗓️ NUEVA GENERACIÓN DE CUOTAS (Sin deriva de fechas)
+  // ------------------------------------------------------------------
   const cuotas = []
-  let fechaActual = new Date(fechaInicio)
-  
-  // Ajuste de zona horaria para que no se corra el día
-  fechaActual.setHours(12, 0, 0, 0)
 
   for (let i = 1; i <= numeroCuotas; i++) {
+    // 👇 SIEMPRE clonamos la fecha inicial original para no perder el día exacto
+    let fechaVencimiento = new Date(fechaInicio)
+    fechaVencimiento.setHours(12, 0, 0, 0)
     
-    // 👇 NUEVA LÓGICA DE FECHAS PARA MENSUALIDADES FIJAS O DE 30 DÍAS
     if (frecuencia === 'MENSUAL' && tipoMensual === 'FECHA_FIJA') {
-      // Suma 1 mes calendario exacto (respeta los días 15, 30, 31, etc.)
-      fechaActual.setMonth(fechaActual.getMonth() + 1)
+      // Sumamos la cantidad de meses directamente a la fecha raíz (Ej: +1 mes, +2 meses, +3 meses)
+      fechaVencimiento.setMonth(fechaVencimiento.getMonth() + i)
     } else {
-      // Suma los días exactos (ej. 7, 15, o 30)
-      fechaActual.setDate(fechaActual.getDate() + diasPorCuota)
+      // Sumamos los días exactos acumulados (Ej: +7 dias, +14 dias, +21 dias)
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + (diasPorCuota * i))
     }
     
     cuotas.push({
       numero: i,
-      fechaVencimiento: new Date(fechaActual),
+      fechaVencimiento: fechaVencimiento,
       monto: montoPorCuota
     })
   }
@@ -175,6 +152,9 @@ export async function crearPrestamo(formData: FormData) {
     }
   })
 
+  import { revalidatePath } from 'next/cache'
+  import { redirect } from 'next/navigation'
+  
   revalidatePath('/')
   redirect('/')
 }
