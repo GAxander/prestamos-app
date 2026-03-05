@@ -25,18 +25,19 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
   const [interes, setInteres] = useState(10)
   const [cuotas, setCuotas] = useState(1)
   const [frecuencia, setFrecuencia] = useState('MENSUAL')
-  
-  // 👇 NUEVO ESTADO: Para saber cómo cobrar el mes
   const [tipoMensual, setTipoMensual] = useState('30_DIAS')
 
   const [mora, setMora] = useState(0)
   const [calculo, setCalculo] = useState({ total: 0, cuota: 0, ganancia: 0, tiempo: '' })
 
+  // 👇 NUEVO ESTADO: Controla si el botón está cargando o no
+  const [cargando, setCargando] = useState(false)
+
   useEffect(() => {
     let dias = 1
     if (frecuencia === 'SEMANAL') dias = 7
     if (frecuencia === 'QUINCENAL') dias = 15
-    if (frecuencia === 'MENSUAL') dias = 30 // Para cálculos de dinero, el mes financiero siempre es 30 días
+    if (frecuencia === 'MENSUAL') dias = 30
 
     const duracionDias = cuotas * dias
     const ganancia = monto * (interes / 100) * (duracionDias / 30)
@@ -76,8 +77,27 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
     setMostrarSugerencias(false)
   }
 
+  // 👇 NUEVA FUNCIÓN: Intercepta el click para bloquear el botón
+  const handleSubmit = async (formData: FormData) => {
+    setCargando(true) // 1. Congelamos el botón de inmediato
+
+    try {
+      await crearPrestamo(formData) // 2. Ejecutamos la acción en el servidor
+    } catch (error: any) {
+      // 3. Ignoramos el error fantasma de redirección de Next.js
+      if (error?.message === 'NEXT_REDIRECT' || error?.digest?.startsWith('NEXT_REDIRECT')) {
+        throw error; 
+      }
+      
+      // 4. Si hay un error real, avisamos y descongelamos el botón
+      alert("Hubo un error al crear el préstamo. Por favor revisa los datos.")
+      setCargando(false)
+    }
+  }
+
   return (
-    <form action={crearPrestamo} className="p-6 space-y-6">
+    // 👇 CAMBIAMOS EL ACTION AL NUEVO HANDLER
+    <form action={handleSubmit} className="p-6 space-y-6">
       <input type="hidden" name="clienteId" value={clienteId || ''} />
       
       {/* 1. CLIENTE */}
@@ -147,7 +167,6 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
           </div>
         </div>
 
-        {/* 👇 AQUÍ ESTÁ LA NUEVA OPCIÓN MÁGICA (SOLO SI ES MENSUAL) */}
         {frecuencia === 'MENSUAL' && (
           <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 animate-in fade-in slide-in-from-top-2">
             <label className="block text-xs font-bold text-yellow-800 mb-1">¿Cómo cobrar el mes?</label>
@@ -219,9 +238,19 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
         </div>
       </div>
 
-      <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 transition-transform active:scale-95 text-lg">
-        Crear Préstamo 🚀
+      {/* 👇 BOTÓN MODIFICADO PARA INHABILITARSE Y MOSTRAR CARGA */}
+      <button 
+        type="submit" 
+        disabled={cargando}
+        className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all text-lg ${
+          cargando 
+            ? 'bg-blue-400 cursor-not-allowed opacity-80' 
+            : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200 active:scale-95'
+        }`}
+      >
+        {cargando ? 'Registrando sistema... ⏳' : 'Crear Préstamo 🚀'}
       </button>
+
     </form>
   )
 }
