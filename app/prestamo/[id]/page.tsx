@@ -28,27 +28,16 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
   if (!prestamo) return notFound()
 
   // --- 1. CÁLCULO EXACTO DEL INTERÉS DIARIO (MEJORADO) ---
-  // En lugar de usar el % mensual, usamos la realidad: (Total a Cobrar - Capital) / Días
-  
-  // A. ¿Cuánto dinero esperamos recuperar en total?
   const totalEsperado = prestamo.cuotas.reduce((sum, c) => sum + Number(c.montoEsperado), 0)
-  
-  // B. ¿Cuánto fue la ganancia neta (Interés Total)?
   const gananciaTotal = totalEsperado - Number(prestamo.montoCapital)
 
-  // C. ¿Cuántos días dura el préstamo realmente?
   let diasPorCuota = 1
   if (prestamo.frecuencia === 'SEMANAL') diasPorCuota = 7
   if (prestamo.frecuencia === 'QUINCENAL') diasPorCuota = 15
   if (prestamo.frecuencia === 'MENSUAL') diasPorCuota = 30
   
-  // prestamo.plazo ahora guarda el NÚMERO DE CUOTAS (según nuestro cambio anterior)
   const duracionDias = prestamo.plazo * diasPorCuota
-
-  // D. Valor del día (Interés Diario)
-  // Si gané 100 soles en 20 días, cada día vale 5 soles.
   const interesDiario = duracionDias > 0 ? (gananciaTotal / duracionDias) : 0
-
 
   // --- 2. CÁLCULOS FINANCIEROS KPI ---
   const saldoPendiente = prestamo.cuotas.reduce((sum, c) => {
@@ -59,7 +48,6 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
   const totalCuotas = prestamo.cuotas.length;
   const pagadas = prestamo.cuotas.filter(c => c.estado === 'PAGADO').length;
   const progreso = (pagadas / totalCuotas) * 100;
-
 
   // --- 3. LÓGICA WHATSAPP INTELIGENTE ---
   const pendientes = prestamo.cuotas.filter(c => c.estado === 'PENDIENTE')
@@ -110,7 +98,6 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
   const telefonoLimpio = prestamo.cliente.telefono?.replace(/\D/g, '') || '';
   const linkWhatsapp = `https://wa.me/51${telefonoLimpio}?text=${encodeURIComponent(mensaje)}`;
 
-
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       
@@ -139,8 +126,11 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
           </span>
         </div>
 
+        {/* TARJETA PRINCIPAL DEL PRÉSTAMO */}
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-          <div className="flex justify-between items-end mb-2">
+          
+          {/* Fila 1: Deuda y Progreso */}
+          <div className="flex justify-between items-end mb-4 border-b border-gray-200 pb-4">
              <div>
                 <p className="text-xs text-gray-400 font-bold uppercase">Deuda Pendiente</p>
                 <p className="text-3xl font-black text-gray-800 tracking-tight">
@@ -155,6 +145,23 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
                 </div>
              </div>
           </div>
+
+          {/* 👇 NUEVA SECCIÓN: Resumen del Negocio (Fila 2) */}
+          <div className="grid grid-cols-3 gap-2 text-center divide-x divide-gray-200">
+             <div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Capital</p>
+                <p className="text-sm font-black text-gray-700">S/ {Number(prestamo.montoCapital).toFixed(2)}</p>
+             </div>
+             <div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Interés</p>
+                <p className="text-sm font-black text-gray-700">{Number(prestamo.interesPorcentaje)}% <span className="text-[9px] font-normal text-gray-400">mens.</span></p>
+             </div>
+             <div>
+                <p className="text-[10px] text-green-600 font-bold uppercase mb-0.5">Ganancia</p>
+                <p className="text-sm font-black text-green-600">S/ {gananciaTotal.toFixed(2)}</p>
+             </div>
+          </div>
+
         </div>
         
         <div className="mt-4 grid grid-cols-5 gap-2">
@@ -269,7 +276,6 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
                     {Number(pago.monto) > 0 ? '+' : ''} S/ {Number(pago.monto).toFixed(2)}
                     </span>
                     
-                    {/* AQUÍ ESTÁ EL NUEVO BOTÓN DE RECIBO */}
                     {pago.tipo !== 'ANULACION' && (
                         <BotonRecibo 
                             cliente={prestamo.cliente}
@@ -288,11 +294,7 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
         )}
       </div>
 
-      {/* ... después del historial de pagos ... */}
-
       <SeccionNotas notas={prestamo.notas} prestamoId={prestamo.id} />
-
-  
 
     </div>
   )
