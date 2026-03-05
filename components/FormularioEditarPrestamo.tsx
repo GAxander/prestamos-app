@@ -49,13 +49,14 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
         <div className="space-y-2 relative">
           <label className="text-sm font-bold text-gray-700">Cambiar Dueño (Cliente)</label>
           <div className="relative">
+            {/* 👇 TEXTO OSCURO Y NÍTIDO APLICADO AQUÍ */}
             <input 
               type="text" 
               name="nombre"
               value={nombre}
               onChange={(e) => manejarBusqueda(e.target.value)}
               autoComplete="off"
-              className="w-full p-3 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-3 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 font-medium placeholder:text-gray-400"
               placeholder="Buscar cliente..."
             />
             {mostrarLista && sugerencias.length > 0 && (
@@ -64,7 +65,7 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
                   <li 
                     key={cliente.id}
                     onClick={() => seleccionarCliente(cliente.nombre)}
-                    className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 text-gray-700"
+                    className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 text-gray-900 font-medium"
                   >
                     {cliente.nombre}
                   </li>
@@ -76,17 +77,18 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
 
         <div className="space-y-2">
           <label className="text-sm font-bold text-gray-700">Corregir Fecha Inicio</label>
+          {/* 👇 LÓGICA DE COLOR APLICADA AQUÍ (Negro si se puede editar, gris si está bloqueado) */}
           <input 
             name="fechaInicio" 
             type="date" 
             defaultValue={new Date(prestamo.fechaInicio).toISOString().split('T')[0]} 
-            className={`w-full p-3 border rounded-lg ${hayPagos ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white'}`}
+            className={`w-full p-3 border rounded-lg outline-none ${hayPagos ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-900 font-medium'}`}
             readOnly={hayPagos} 
           />
-          {hayPagos && <p className="text-[10px] text-red-500">🚫 No puedes cambiar fecha con pagos activos.</p>}
+          {hayPagos && <p className="text-[10px] text-red-500 font-bold">🚫 No puedes cambiar fecha con pagos activos.</p>}
         </div>
 
-        <button type="submit" className="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md">
+        <button type="submit" className="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition-transform active:scale-95">
           Guardar Cambios
         </button>
       </form>
@@ -126,7 +128,7 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
                <button 
                  type="button"
                  onClick={() => setConfirmarEliminar(false)}
-                 className="w-1/2 py-2 bg-white border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-50"
+                 className="w-1/2 py-2 bg-white border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-50 transition"
                >
                  Cancelar
                </button>
@@ -135,7 +137,7 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
                   <input type="hidden" name="prestamoId" value={prestamo.id} />
                   <button 
                     type="submit" 
-                    className="w-full py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-md"
+                    className="w-full py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-md transition"
                   >
                     ¡Sí, Eliminar!
                   </button>
@@ -146,7 +148,7 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
       </div>
       
       <div className="text-center">
-         <Link href={`/prestamo/${prestamo.id}`} className="text-gray-400 text-sm hover:underline">Cancelar y Volver</Link>
+         <Link href={`/prestamo/${prestamo.id}`} className="text-gray-400 font-medium text-sm hover:underline">Cancelar y Volver</Link>
       </div>
     </div>
   )
