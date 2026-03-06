@@ -1,36 +1,50 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { verificarSesion } from '@/lib/auth' // 👈 1. Importamos la llave de seguridad
 
-// 🔴 ESTA LÍNEA ES OBLIGATORIA: Evita que se guarde memoria vieja
 export const dynamic = 'force-dynamic'
 
-// Función auxiliar para dinero
 const formatMoney = (amount: number) => `S/ ${amount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export default async function DashboardFinancieroPage() {
+  // 👈 2. Obtenemos el ID de tu cuenta para filtrar TODO
+  const userId = await verificarSesion()
+
   const hoy = new Date()
-  
   const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
   const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59)
 
-  // 1. CONSULTAS (Histórico Global)
+  // 1. CONSULTAS (Histórico Global filtrado por TU usuario)
   const resumenPrestamos = await prisma.prestamo.aggregate({
-    _sum: { montoCapital: true }
+    _sum: { montoCapital: true },
+    where: { cliente: { usuarioId: userId } } // 👈 Candado
   })
   
   const resumenPagos = await prisma.pago.aggregate({
     _sum: { monto: true },
-    where: { tipo: { not: 'ANULACION' } }
+    where: { 
+      tipo: { not: 'ANULACION' },
+      prestamo: { cliente: { usuarioId: userId } } // 👈 Candado
+    }
   })
 
-  // 2. Intereses (Cálculo manual para mayor precisión)
+  // 2. Intereses (Cálculo exacto con la nueva fórmula de tiempo)
   const prestamos = await prisma.prestamo.findMany({
-    select: { montoCapital: true, interesPorcentaje: true, estado: true }
+    where: { cliente: { usuarioId: userId } }, // 👈 Candado
+    select: { montoCapital: true, interesPorcentaje: true, estado: true, frecuencia: true, plazo: true }
   })
 
   const gananciaTotalProyectada = prestamos.reduce((sum, p) => {
-    const interes = Number(p.montoCapital) * (Number(p.interesPorcentaje) / 100)
-    return sum + interes
+    // Aplicamos la misma matemática exacta que usamos al crear el préstamo
+    let diasPorCuota = 1
+    if (p.frecuencia === 'SEMANAL') diasPorCuota = 7
+    if (p.frecuencia === 'QUINCENAL') diasPorCuota = 15
+    if (p.frecuencia === 'MENSUAL') diasPorCuota = 30
+    
+    const duracionDias = p.plazo * diasPorCuota
+    const ganancia = Number(p.montoCapital) * (Number(p.interesPorcentaje) / 100) * (duracionDias / 30)
+    
+    return sum + ganancia
   }, 0)
 
   // 3. Datos del MES ACTUAL
@@ -38,31 +52,29 @@ export default async function DashboardFinancieroPage() {
     _sum: { monto: true },
     where: { 
       fecha: { gte: inicioMes, lte: finMes },
-      tipo: { not: 'ANULACION' }
+      tipo: { not: 'ANULACION' },
+      prestamo: { cliente: { usuarioId: userId } } // 👈 Candado
     }
   })
 
   const prestamosEsteMes = await prisma.prestamo.aggregate({
     _sum: { montoCapital: true },
-    where: { fechaInicio: { gte: inicioMes, lte: finMes } }
+    where: { 
+      fechaInicio: { gte: inicioMes, lte: finMes },
+      cliente: { usuarioId: userId } // 👈 Candado
+    }
   })
 
   // 4. Cartera Activa (Dinero en la calle)
-  // Filtramos solo los que NO están finalizados
   const prestamosActivos = prestamos.filter(p => p.estado === 'ACTIVO' || p.estado === 'PENDIENTE')
   
-  // Convertimos a números seguros (evita nulos)
   const totalPrestado = Number(resumenPrestamos._sum.montoCapital || 0)
   const totalCobrado = Number(resumenPagos._sum.monto || 0)
   const totalIngresosMes = Number(pagosEsteMes._sum.monto || 0)
   const totalSalidasMes = Number(prestamosEsteMes._sum.montoCapital || 0)
   const flujoCajaMes = totalIngresosMes - totalSalidasMes
 
-  // Cálculo de deuda exigible: (Todo lo prestado + Todo el interés) - (Todo lo que ya pagaron)
-  // Si no hay préstamos, esto debe dar 0.
   let totalDeudaExigible = (totalPrestado + gananciaTotalProyectada) - totalCobrado
-  
-  // Corrección de seguridad: Si la deuda sale negativa por error matemático de centavos, poner 0
   if (totalDeudaExigible < 0) totalDeudaExigible = 0
 
   return (
@@ -75,7 +87,7 @@ export default async function DashboardFinancieroPage() {
            <p className="text-sm text-gray-500 font-medium">Estado financiero del negocio</p>
         </div>
         <Link href="/" className="bg-white border border-gray-300 text-gray-700 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-100 transition shadow-sm">
-           ← Volver al Inicio
+            ← Volver al Inicio
         </Link>
       </div>
 
