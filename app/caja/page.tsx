@@ -127,7 +127,7 @@ export default async function DashboardFinancieroPage() {
               <div>
                 <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Dinero en la Calle</p>
                 <h2 className="text-4xl font-black text-white">{formatMoney(totalDeudaExigible)}</h2>
-                <p className="text-slate-400 text-sm mt-2">Saldo pendiente por cobrar a {prestamosActivos.length} clientes activos.</p>
+                <p className="text-slate-400 text-sm mt-2">Saldo pendiente por cobrar a {prestamosActivos.length} prestamos activos.</p>
               </div>
               <div className="hidden md:block text-right">
                  <div className="text-4xl">📉</div>
