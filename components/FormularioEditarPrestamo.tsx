@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { actualizarPrestamo, eliminarPrestamo } from '@/app/actions'
 import Link from 'next/link'
 
@@ -23,13 +23,29 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
   const [cargando, setCargando] = useState(false)
 
-  // Nuevos estados para edición completa
+  // Estados para edición completa
   const [fechaInicio, setFechaInicio] = useState(new Date(prestamo.fechaInicio).toISOString().split('T')[0])
   const [monto, setMonto] = useState(Number(prestamo.montoCapital))
   const [frecuencia, setFrecuencia] = useState(prestamo.frecuencia)
   const [cuotas, setCuotas] = useState(prestamo.plazo)
   const [interes, setInteres] = useState(Number(prestamo.interesPorcentaje))
   const [mora, setMora] = useState(Number(prestamo.moraDiaria || 0))
+
+  // 👇 NUEVO: EFECTO MATEMÁTICO PARA AUTO-CALCULAR LA MORA
+  useEffect(() => {
+    if (!hayPagos) {
+      let dias = 1
+      if (frecuencia === 'SEMANAL') dias = 7
+      if (frecuencia === 'QUINCENAL') dias = 15
+      if (frecuencia === 'MENSUAL') dias = 30
+
+      const duracionDias = cuotas * dias
+      const ganancia = monto * (interes / 100) * (duracionDias / 30)
+      const moraSugerida = duracionDias > 0 ? (ganancia / duracionDias) : 0
+
+      setMora(Number(moraSugerida.toFixed(2)))
+    }
+  }, [monto, interes, cuotas, frecuencia, hayPagos])
 
   const manejarBusqueda = (texto: string) => {
     setNombre(texto)
@@ -146,7 +162,10 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700">Mora Diaria</label>
+             <label className="text-sm font-bold text-gray-700 flex justify-between">
+                 <span>Mora x Día (S/)</span>
+                 {!hayPagos && <span className="text-[10px] text-blue-500 font-normal self-center">Auto ✨</span>}
+             </label>
             <input 
               name="moraDiaria" type="number" step="0.01" value={mora} onChange={e => setMora(Number(e.target.value))} readOnly={hayPagos}
               className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
