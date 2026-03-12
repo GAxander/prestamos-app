@@ -220,106 +220,102 @@ export async function registrarPago(formData: FormData) {
 // app/actions.ts
 
 export async function procesarRenovacion(formData: FormData) {
-  const prestamoId = Number(formData.get('prestamoId'))
+  const userId = await verificarSesion()
   
-  // 1. Datos Financieros
-  const pagoHoy = Number(formData.get('pagoHoy') || 0)
-  const aumentoCapital = Number(formData.get('aumentoCapital') || 0)
+  const prestamoIdAntiguo = Number(formData.get('prestamoId'))
+  const deudaBase = Number(formData.get('deudaActual')) // La deuda que jaló del sistema
+  const pagoHoy = Number(formData.get('pagoHoy'))
+  const aumentoCapital = Number(formData.get('aumentoCapital'))
   
-  // 2. Nuevas Condiciones
-  const nuevoInteres = Number(formData.get('nuevoInteres'))
+  const nuevaFrecuencia = formData.get('nuevaFrecuencia') as 'DIARIO' | 'SEMANAL' | 'QUINCENAL' | 'MENSUAL'
   const nuevasCuotas = Number(formData.get('nuevasCuotas'))
-  const nuevaFrecuencia = formData.get('nuevaFrecuencia') as string
+  const nuevoInteres = Number(formData.get('nuevoInteres'))
   const moraDiaria = Number(formData.get('moraDiaria') || 0)
-
-  // 3. Obtener el préstamo viejo para cerrarlo
-  const prestamoAnterior = await prisma.prestamo.findUnique({
-    where: { id: prestamoId },
-    include: { cuotas: true }
-  })
-
-  if (!prestamoAnterior) throw new Error("Préstamo no encontrado")
-
-  // Calcular deuda actual real
-  const deudaActual = prestamoAnterior.cuotas.reduce((sum, c) => {
-    return sum + (Number(c.montoEsperado) - Number(c.montoPagado))
-  }, 0)
-
-  // 4. Calcular el NUEVO CAPITAL BASE
-  // (Lo que debía - Lo que pagó hoy + Dinero extra que le doy)
-  const nuevoMontoCapital = (deudaActual - pagoHoy) + aumentoCapital
-
-  // 5. Calcular Intereses del Nuevo Préstamo (Lógica de Días)
-  let diasPorCuota = 1
-  if (nuevaFrecuencia === 'SEMANAL') diasPorCuota = 7
-  if (nuevaFrecuencia === 'QUINCENAL') diasPorCuota = 15
-  if (nuevaFrecuencia === 'MENSUAL') diasPorCuota = 30
-
-  const duracionDias = nuevasCuotas * diasPorCuota
   
-  // Interés proporcional: Capital * Tasa * (Tiempo/30)
-  const gananciaInteres = nuevoMontoCapital * (nuevoInteres / 100) * (duracionDias / 30)
+  // 👇 NUEVAS FECHAS
+  const fechaRenovacion = new Date(formData.get('fechaRenovacion') as string)
+  const fechaPrimerPago = new Date(formData.get('fechaPrimerPago') as string)
+  const tipoMensual = formData.get('tipoMensual') as string || 'FECHA_FIJA'
 
-  const totalAPagar = nuevoMontoCapital + gananciaInteres
-  const montoPorCuota = totalAPagar / nuevasCuotas
-
-  // --- TRANSACCIÓN ---
-  // A. Marcar el anterior como REFINANCIADO (o Finalizado)
-  await prisma.prestamo.update({
-    where: { id: prestamoId },
-    data: { estado: 'REFINANCIADO' } // O 'FINALIZADO' según prefieras
+  // 1. Buscamos el préstamo viejo
+  const prestamoViejo = await prisma.prestamo.findUnique({
+    where: { id: prestamoIdAntiguo }
   })
 
-  // B. Crear el NUEVO PRÉSTAMO
-  const fechaInicio = new Date()
-  const cuotas = []
-  let fechaActual = new Date(fechaInicio)
-  fechaActual.setHours(12, 0, 0, 0)
+  if (!prestamoViejo) throw new Error("Préstamo original no encontrado")
 
-  for (let i = 1; i <= nuevasCuotas; i++) {
-    fechaActual.setDate(fechaActual.getDate() + diasPorCuota)
-    cuotas.push({
-      numero: i,
-      fechaVencimiento: new Date(fechaActual),
-      monto: montoPorCuota
-    })
-  }
-
-  await prisma.prestamo.create({
-    data: {
-      clienteId: prestamoAnterior.clienteId,
-      montoCapital: nuevoMontoCapital, // Este es el nuevo saldo base
-      interesPorcentaje: nuevoInteres,
-      plazo: nuevasCuotas,
-      frecuencia: nuevaFrecuencia,
-      fechaInicio: fechaInicio,
-      moraDiaria: moraDiaria,
-      cuotas: {
-        create: cuotas.map(c => ({
-          numero: c.numero,
-          fechaVencimiento: c.fechaVencimiento,
-          montoEsperado: c.monto,
-          estado: 'PENDIENTE'
-        }))
-      }
-    }
-  })
-
-  // C. Si pagó algo hoy, registramos ese pago en el historial del VIEJO (opcional, para cuadrar caja)
+  // 2. Si el cliente dio dinero HOY, registramos el pago al préstamo viejo
   if (pagoHoy > 0) {
     await prisma.pago.create({
       data: {
-        prestamoId: prestamoId,
+        prestamoId: prestamoIdAntiguo,
         monto: pagoHoy,
-        fecha: new Date(),
+        fecha: fechaRenovacion, // Se registra con la fecha que elegiste
         tipo: 'CUOTA',
-        nota: 'Pago inicial por refinanciamiento'
+        nota: 'Pago inicial por Refinanciamiento'
       }
     })
   }
 
+  // 3. Calculamos la matemática del nuevo préstamo
+  const nuevoCapitalBase = (deudaBase - pagoHoy) + aumentoCapital
+
+  let diasPorCuota = 1
+  if (nuevaFrecuencia === 'SEMANAL') diasPorCuota = 7
+  if (nuevaFrecuencia === 'QUINCENAL') diasPorCuota = 15
+  if (nuevaFrecuencia === 'MENSUAL') diasPorCuota = 30 
+
+  const duracionTotalDias = nuevasCuotas * diasPorCuota
+  const gananciaInteres = nuevoCapitalBase * (nuevoInteres / 100) * (duracionTotalDias / 30)
+  const totalAPagar = nuevoCapitalBase + gananciaInteres
+  const montoPorCuota = totalAPagar / nuevasCuotas
+
+  // 4. Generamos las nuevas cuotas con la fecha exacta del primer pago
+  const cuotasNuevas = []
+  for (let i = 1; i <= nuevasCuotas; i++) {
+    let fechaVencimiento = new Date(fechaPrimerPago)
+    fechaVencimiento.setHours(12, 0, 0, 0)
+    
+    const saltosDeTiempo = i - 1 
+
+    if (nuevaFrecuencia === 'MENSUAL' && tipoMensual === 'FECHA_FIJA') {
+      fechaVencimiento.setMonth(fechaVencimiento.getMonth() + saltosDeTiempo)
+    } else {
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + (diasPorCuota * saltosDeTiempo))
+    }
+    
+    cuotasNuevas.push({
+      numero: i,
+      fechaVencimiento: fechaVencimiento,
+      montoEsperado: montoPorCuota,
+      estado: 'PENDIENTE'
+    })
+  }
+
+  // 5. HACEMOS EL CAMBIO EN LA BASE DE DATOS
+  await prisma.$transaction([
+    // A) Cerramos el préstamo viejo
+    prisma.prestamo.update({
+      where: { id: prestamoIdAntiguo },
+      data: { estado: 'REFINANCIADO' }
+    }),
+    // B) Creamos el préstamo nuevo
+    prisma.prestamo.create({
+      data: {
+        clienteId: prestamoViejo.clienteId, 
+        montoCapital: nuevoCapitalBase,
+        interesPorcentaje: nuevoInteres,
+        frecuencia: nuevaFrecuencia,
+        plazo: nuevasCuotas, 
+        fechaInicio: fechaRenovacion, // 👈 Fecha de la renovación
+        moraDiaria: moraDiaria,
+        cuotas: { create: cuotasNuevas }
+      }
+    })
+  ])
+
   revalidatePath('/')
-  redirect(`/cliente/${prestamoAnterior.clienteId}`)
+  redirect('/')
 }
 
 // --- 4. ACTUALIZAR CLIENTE (EDITAR) ---
