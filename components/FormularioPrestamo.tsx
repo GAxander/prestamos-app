@@ -27,10 +27,13 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
   const [frecuencia, setFrecuencia] = useState('MENSUAL')
   const [tipoMensual, setTipoMensual] = useState('30_DIAS')
 
+  // 👇 NUEVOS ESTADOS PARA FECHAS
+  const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0])
+  const [fechaPrimerPago, setFechaPrimerPago] = useState('')
+  const [modificoPrimerPago, setModificoPrimerPago] = useState(false)
+
   const [mora, setMora] = useState(0)
   const [calculo, setCalculo] = useState({ total: 0, cuota: 0, ganancia: 0, tiempo: '' })
-
-  // 👇 NUEVO ESTADO: Controla si el botón está cargando o no
   const [cargando, setCargando] = useState(false)
 
   useEffect(() => {
@@ -51,7 +54,14 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
     if (duracionDias > 30) textoTiempo = `${(duracionDias/30).toFixed(1)} meses`
 
     setCalculo({ total, cuota: valorCuota, ganancia, tiempo: textoTiempo })
-  }, [monto, interes, cuotas, frecuencia]) 
+
+    // 👇 MAGIA: Auto-calculamos el primer pago SOLO si tú no lo has modificado a mano
+    if (!modificoPrimerPago) {
+      const fechaBase = new Date(fechaInicio + 'T12:00:00') // Truco para zona horaria
+      fechaBase.setDate(fechaBase.getDate() + dias)
+      setFechaPrimerPago(fechaBase.toISOString().split('T')[0])
+    }
+  }, [monto, interes, cuotas, frecuencia, fechaInicio, modificoPrimerPago]) 
 
   const handleNombreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const valor = e.target.value
@@ -77,26 +87,20 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
     setMostrarSugerencias(false)
   }
 
-  // 👇 NUEVA FUNCIÓN: Intercepta el click para bloquear el botón
   const handleSubmit = async (formData: FormData) => {
-    setCargando(true) // 1. Congelamos el botón de inmediato
-
+    setCargando(true) 
     try {
-      await crearPrestamo(formData) // 2. Ejecutamos la acción en el servidor
+      await crearPrestamo(formData) 
     } catch (error: any) {
-      // 3. Ignoramos el error fantasma de redirección de Next.js
       if (error?.message === 'NEXT_REDIRECT' || error?.digest?.startsWith('NEXT_REDIRECT')) {
         throw error; 
       }
-      
-      // 4. Si hay un error real, avisamos y descongelamos el botón
       alert("Hubo un error al crear el préstamo. Por favor revisa los datos.")
       setCargando(false)
     }
   }
 
   return (
-    // 👇 CAMBIAMOS EL ACTION AL NUEVO HANDLER
     <form action={handleSubmit} className="p-6 space-y-6">
       <input type="hidden" name="clienteId" value={clienteId || ''} />
       
@@ -202,11 +206,30 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
           </div>
         </div>
 
+        {/* 👇 AQUÍ ESTÁ EL NUEVO SELECTOR DOBLE DE FECHAS */}
         <div className="grid grid-cols-2 gap-4">
            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de Inicio</label>
-              <input name="fechaInicio" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none text-gray-900 font-medium" />
+              <label className="block text-xs font-bold text-gray-700 mb-1">Día de Entrega (Inicio)</label>
+              <input 
+                 name="fechaInicio" type="date" value={fechaInicio} 
+                 onChange={e => setFechaInicio(e.target.value)} 
+                 className="w-full p-3 bg-white border border-gray-300 rounded-lg outline-none text-gray-900 font-medium" 
+              />
            </div>
+           <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1 flex justify-between">
+                 <span>1er Pago 🎯</span>
+                 <span className="text-[10px] text-blue-500 font-normal self-center">Editable ✏️</span>
+              </label>
+              <input 
+                 name="fechaPrimerPago" type="date" value={fechaPrimerPago} 
+                 onChange={e => { setFechaPrimerPago(e.target.value); setModificoPrimerPago(true); }}
+                 className="w-full p-3 bg-yellow-50 border border-yellow-300 text-gray-900 font-medium rounded-lg outline-none focus:ring-2 focus:ring-yellow-400 transition-colors" 
+              />
+           </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
            <div>
               <label className="block text-xs font-bold text-gray-700 mb-1 flex justify-between">
                  <span>Mora x Día (S/)</span>
@@ -238,7 +261,6 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
         </div>
       </div>
 
-      {/* 👇 BOTÓN MODIFICADO PARA INHABILITARSE Y MOSTRAR CARGA */}
       <button 
         type="submit" 
         disabled={cargando}

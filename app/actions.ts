@@ -55,41 +55,30 @@ export async function crearPrestamo(formData: FormData) {
   const interesMensual = Number(formData.get('interes')) 
   const numeroCuotas = Number(formData.get('cuotas')) 
   const frecuencia = formData.get('frecuencia') as 'DIARIO' | 'SEMANAL' | 'QUINCENAL' | 'MENSUAL'
+  
+  // 👇 Recibimos ambas fechas
   const fechaInicio = new Date(formData.get('fechaInicio') as string)
+  const fechaPrimerPago = new Date(formData.get('fechaPrimerPago') as string)
+  
   const moraDiaria = Number(formData.get('moraDiaria') || 0)
-
   const tipoMensual = formData.get('tipoMensual') as string || '30_DIAS'
 
   if (!nombre || monto <= 0 || numeroCuotas <= 0) {
     throw new Error("Datos inválidos")
   }
 
-  // ------------------------------------------------------------------
-  // 🧠 LÓGICA INTELIGENTE DE CLIENTE
-  // ------------------------------------------------------------------
+  // 🧠 Lógica de Cliente (Buscar o Crear)
   let clienteIdFinal: number
-
   if (clienteIdForm) {
     clienteIdFinal = Number(clienteIdForm)
-    await prisma.cliente.update({
-      where: { id: clienteIdFinal },
-      data: { telefono }
-    })
+    await prisma.cliente.update({ where: { id: clienteIdFinal }, data: { telefono } })
   } else {
-    let cliente = await prisma.cliente.findFirst({ 
-      where: { nombre: nombre, usuarioId: userId } 
-    })
-    
+    let cliente = await prisma.cliente.findFirst({ where: { nombre: nombre, usuarioId: userId } })
     if (cliente) {
       clienteIdFinal = cliente.id
-      await prisma.cliente.update({
-        where: { id: clienteIdFinal },
-        data: { telefono }
-      })
+      await prisma.cliente.update({ where: { id: clienteIdFinal }, data: { telefono } })
     } else {
-      const nuevoCliente = await prisma.cliente.create({ 
-        data: { nombre, telefono, usuarioId: userId } 
-      })
+      const nuevoCliente = await prisma.cliente.create({ data: { nombre, telefono, usuarioId: userId } })
       clienteIdFinal = nuevoCliente.id
     }
   }
@@ -106,22 +95,21 @@ export async function crearPrestamo(formData: FormData) {
   const totalAPagar = monto + gananciaInteres
   const montoPorCuota = totalAPagar / numeroCuotas
 
-  // ------------------------------------------------------------------
-  // 🗓️ NUEVA GENERACIÓN DE CUOTAS (Sin deriva de fechas)
-  // ------------------------------------------------------------------
+  // 3. GENERACIÓN INTELIGENTE DE CUOTAS
   const cuotas = []
 
   for (let i = 1; i <= numeroCuotas; i++) {
-    // Siempre clonamos la fecha inicial original para no perder el día exacto
-    let fechaVencimiento = new Date(fechaInicio)
+    // 👇 La CUOTA 1 usa exactamente la fecha que escogiste.
+    let fechaVencimiento = new Date(fechaPrimerPago)
     fechaVencimiento.setHours(12, 0, 0, 0)
     
+    // Saltos a sumar: Cuota 1 (0 saltos), Cuota 2 (1 salto), etc.
+    const saltosDeTiempo = i - 1 
+
     if (frecuencia === 'MENSUAL' && tipoMensual === 'FECHA_FIJA') {
-      // Sumamos la cantidad de meses directamente a la fecha raíz
-      fechaVencimiento.setMonth(fechaVencimiento.getMonth() + i)
+      fechaVencimiento.setMonth(fechaVencimiento.getMonth() + saltosDeTiempo)
     } else {
-      // Sumamos los días exactos acumulados
-      fechaVencimiento.setDate(fechaVencimiento.getDate() + (diasPorCuota * i))
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + (diasPorCuota * saltosDeTiempo))
     }
     
     cuotas.push({
@@ -131,7 +119,7 @@ export async function crearPrestamo(formData: FormData) {
     })
   }
 
-  // Guardar en Base de Datos
+  // 4. Guardar en Base de Datos
   await prisma.prestamo.create({
     data: {
       clienteId: clienteIdFinal, 
@@ -152,11 +140,7 @@ export async function crearPrestamo(formData: FormData) {
     }
   })
 
-  // Los imports ya no están aquí abajo, asumimos que están en la línea 1 de tu archivo :)
-  revalidatePath('/')
-  redirect('/')
 }
-
 // --- 2. REGISTRAR PAGO DE UNA CUOTA ---
 // app/actions.ts
 
