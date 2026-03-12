@@ -140,6 +140,8 @@ export async function crearPrestamo(formData: FormData) {
     }
   })
 
+  revalidatePath('/')
+  redirect('/')
 }
 // --- 2. REGISTRAR PAGO DE UNA CUOTA ---
 // app/actions.ts
