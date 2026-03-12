@@ -430,6 +430,11 @@ export async function actualizarPrestamo(formData: FormData) {
   const frecuencia = formData.get('frecuencia') as 'DIARIO' | 'SEMANAL' | 'QUINCENAL' | 'MENSUAL'
   const moraDiaria = Number(formData.get('moraDiaria') || 0)
 
+  // 👇 NUEVOS CAMPOS RECOGIDOS DEL FORMULARIO
+  const fechaPrimerPagoRaw = formData.get('fechaPrimerPago') as string
+  const fechaPrimerPago = fechaPrimerPagoRaw ? new Date(fechaPrimerPagoRaw) : fechaInicio
+  const tipoMensual = formData.get('tipoMensual') as string || 'FECHA_FIJA'
+
   // 1. Verificamos si ya le han hecho pagos
   const prestamoExistente = await prisma.prestamo.findUnique({
     where: { id: prestamoId },
@@ -470,13 +475,16 @@ export async function actualizarPrestamo(formData: FormData) {
 
     const nuevasCuotas = []
     for (let i = 1; i <= numeroCuotas; i++) {
-      let fechaVencimiento = new Date(fechaInicio)
-      fechaVencimiento.setHours(12, 0, 0, 0) // Evitar desfase de zona horaria
+      // 👇 USAMOS LA FECHA EXACTA DEL PRIMER PAGO COMO RAÍZ
+      let fechaVencimiento = new Date(fechaPrimerPago)
+      fechaVencimiento.setHours(12, 0, 0, 0) 
       
-      if (frecuencia === 'MENSUAL') {
-        fechaVencimiento.setDate(fechaVencimiento.getDate() + (30 * i))
+      const saltosDeTiempo = i - 1 
+
+      if (frecuencia === 'MENSUAL' && tipoMensual === 'FECHA_FIJA') {
+        fechaVencimiento.setMonth(fechaVencimiento.getMonth() + saltosDeTiempo)
       } else {
-        fechaVencimiento.setDate(fechaVencimiento.getDate() + (diasPorCuota * i))
+        fechaVencimiento.setDate(fechaVencimiento.getDate() + (diasPorCuota * saltosDeTiempo))
       }
       
       nuevasCuotas.push({

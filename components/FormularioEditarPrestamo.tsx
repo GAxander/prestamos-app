@@ -23,15 +23,24 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
   const [cargando, setCargando] = useState(false)
 
+  // Buscamos la fecha de la cuota 1 actual para mostrarla por defecto
+  const primeraCuota = prestamo.cuotas?.find((c: any) => c.numero === 1)
+  const fechaPrimeraCuota = primeraCuota 
+      ? new Date(primeraCuota.fechaVencimiento).toISOString().split('T')[0] 
+      : new Date(prestamo.fechaInicio).toISOString().split('T')[0]
+
   // Estados para edición completa
   const [fechaInicio, setFechaInicio] = useState(new Date(prestamo.fechaInicio).toISOString().split('T')[0])
+  const [fechaPrimerPago, setFechaPrimerPago] = useState(fechaPrimeraCuota)
+  const [tipoMensual, setTipoMensual] = useState('FECHA_FIJA')
+
   const [monto, setMonto] = useState(Number(prestamo.montoCapital))
   const [frecuencia, setFrecuencia] = useState(prestamo.frecuencia)
   const [cuotas, setCuotas] = useState(prestamo.plazo)
   const [interes, setInteres] = useState(Number(prestamo.interesPorcentaje))
   const [mora, setMora] = useState(Number(prestamo.moraDiaria || 0))
 
-  // 👇 NUEVO: EFECTO MATEMÁTICO PARA AUTO-CALCULAR LA MORA
+  // EFECTO MATEMÁTICO PARA AUTO-CALCULAR LA MORA
   useEffect(() => {
     if (!hayPagos) {
       let dias = 1
@@ -115,23 +124,6 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700">Monto Capital (S/)</label>
-            <input 
-              name="monto" type="number" value={monto} onChange={e => setMonto(Number(e.target.value))} readOnly={hayPagos}
-              className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700">Fecha de Inicio</label>
-            <input 
-              name="fechaInicio" type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} readOnly={hayPagos} 
-              className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
             <label className="text-sm font-bold text-gray-700">Frecuencia</label>
             {hayPagos ? (
                <input name="frecuencia" type="text" value={frecuencia} readOnly className="w-full p-3 border rounded-lg outline-none font-medium bg-gray-100 text-gray-400" />
@@ -153,7 +145,47 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
           </div>
         </div>
 
+        {/* 👇 SELECTOR DE TIPO MENSUAL (Solo se muestra si es mensual y no tiene pagos) */}
+        {frecuencia === 'MENSUAL' && !hayPagos && (
+          <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 animate-in fade-in slide-in-from-top-2">
+            <label className="block text-xs font-bold text-yellow-800 mb-1">¿Cómo cobrar el mes?</label>
+            <select 
+              name="tipoMensual" 
+              value={tipoMensual} 
+              onChange={e => setTipoMensual(e.target.value)}
+              className="w-full p-2 bg-white border border-yellow-300 rounded-lg outline-none text-gray-900 text-sm font-medium focus:ring-2 focus:ring-yellow-400"
+            >
+              <option value="FECHA_FIJA">El mismo día del mes (Ej: Todos los 15)</option>
+              <option value="30_DIAS">Exactamente cada 30 días</option>
+            </select>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">Día de Entrega (Inicio)</label>
+            <input 
+              name="fechaInicio" type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} readOnly={hayPagos} 
+              className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">1er Pago 🎯</label>
+            <input 
+              name="fechaPrimerPago" type="date" value={fechaPrimerPago} onChange={e => setFechaPrimerPago(e.target.value)} readOnly={hayPagos} 
+              className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-yellow-50 border-yellow-300 text-gray-900 focus:ring-2 focus:ring-yellow-400 transition-colors'}`}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">Monto Capital (S/)</label>
+            <input 
+              name="monto" type="number" value={monto} onChange={e => setMonto(Number(e.target.value))} readOnly={hayPagos}
+              className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
+            />
+          </div>
           <div className="space-y-2">
             <label className="text-sm font-bold text-gray-700">Interés (%)</label>
             <input 
@@ -161,6 +193,9 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
               className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
             />
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
           <div className="space-y-2">
              <label className="text-sm font-bold text-gray-700 flex justify-between">
                  <span>Mora x Día (S/)</span>
