@@ -432,79 +432,96 @@ export async function eliminarPrestamo(formData: FormData) {
 }
 // --- 7. ACTUALIZAR PRÉSTAMO (EDICIÓN) ---
 export async function actualizarPrestamo(formData: FormData) {
+  const userId = await verificarSesion()
+  
   const prestamoId = Number(formData.get('prestamoId'))
   const nombreCliente = formData.get('nombre') as string
-  const nuevaFechaStr = formData.get('fechaInicio') as string
+  const fechaInicio = new Date(formData.get('fechaInicio') as string)
+  
+  const monto = Number(formData.get('monto'))
+  const interesMensual = Number(formData.get('interes'))
+  const numeroCuotas = Number(formData.get('cuotas'))
+  const frecuencia = formData.get('frecuencia') as 'DIARIO' | 'SEMANAL' | 'QUINCENAL' | 'MENSUAL'
+  const moraDiaria = Number(formData.get('moraDiaria') || 0)
 
-  const prestamo = await prisma.prestamo.findUnique({
+  // 1. Verificamos si ya le han hecho pagos
+  const prestamoExistente = await prisma.prestamo.findUnique({
     where: { id: prestamoId },
-    include: { cuotas: true }
+    include: { cuotas: true, cliente: true }
   })
-  if (!prestamo) throw new Error("Préstamo no encontrado")
 
-  // 1. Gestionar cambio de CLIENTE
-  let nuevoClienteId = prestamo.clienteId
-  if (nombreCliente) {
-    const cliente = await prisma.cliente.findUnique({ where: { nombre: nombreCliente } })
-    if (cliente) {
-      nuevoClienteId = cliente.id
-    } else {
-      throw new Error("El cliente indicado no existe.")
+  if (!prestamoExistente) throw new Error("Préstamo no encontrado")
+  const hayPagos = prestamoExistente.cuotas.some(c => c.estado === 'PAGADO')
+
+  // 2. Gestionar Cambio de Cliente
+  let clienteIdFinal = prestamoExistente.clienteId
+  if (nombreCliente && nombreCliente !== prestamoExistente.cliente?.nombre) {
+    let cliente = await prisma.cliente.findFirst({ where: { nombre: nombreCliente, usuarioId: userId } })
+    if (!cliente) {
+      cliente = await prisma.cliente.create({ data: { nombre: nombreCliente, usuarioId: userId } })
     }
+    clienteIdFinal = cliente.id
   }
 
-  // 2. Gestionar cambio de FECHA
-  if (nuevaFechaStr) {
-    const nuevaFecha = new Date(nuevaFechaStr + 'T12:00:00')
-    const hayPagos = prestamo.cuotas.some(c => c.estado === 'PAGADO')
-    
-    if (hayPagos) {
-      if (nuevaFecha.getTime() !== prestamo.fechaInicio.getTime()) {
-        throw new Error("No puedes cambiar la fecha si ya hay cuotas pagadas.")
+  // 3. Lógica de actualización estricta
+  if (hayPagos) {
+    // Si hay pagos, SOLO actualizamos al cliente (por seguridad contable)
+    await prisma.prestamo.update({
+      where: { id: prestamoId },
+      data: { clienteId: clienteIdFinal }
+    })
+  } else {
+    // 4. Si NO hay pagos, borramos el cronograma viejo y generamos uno nuevo exacto
+    let diasPorCuota = 1
+    if (frecuencia === 'SEMANAL') diasPorCuota = 7
+    if (frecuencia === 'QUINCENAL') diasPorCuota = 15
+    if (frecuencia === 'MENSUAL') diasPorCuota = 30 
+
+    const duracionTotalDias = numeroCuotas * diasPorCuota
+    const gananciaInteres = monto * (interesMensual / 100) * (duracionTotalDias / 30)
+    const totalAPagar = monto + gananciaInteres
+    const montoPorCuota = totalAPagar / numeroCuotas
+
+    const nuevasCuotas = []
+    for (let i = 1; i <= numeroCuotas; i++) {
+      let fechaVencimiento = new Date(fechaInicio)
+      fechaVencimiento.setHours(12, 0, 0, 0) // Evitar desfase de zona horaria
+      
+      if (frecuencia === 'MENSUAL') {
+        fechaVencimiento.setDate(fechaVencimiento.getDate() + (30 * i))
+      } else {
+        fechaVencimiento.setDate(fechaVencimiento.getDate() + (diasPorCuota * i))
       }
-    } else {
-      // Regenerar cronograma
-      const { generarCronograma } = require('@/lib/finance')
       
-      const { cuotas } = generarCronograma(
-        Number(prestamo.montoCapital),
-        Number(prestamo.interesPorcentaje),
-        prestamo.frecuencia,
-        prestamo.plazo,
-        nuevaFecha
-      )
-
-      await prisma.$transaction([
-        prisma.cuota.deleteMany({ where: { prestamoId } }),
-        prisma.prestamo.update({
-          where: { id: prestamoId },
-          data: { 
-            clienteId: nuevoClienteId,
-            fechaInicio: nuevaFecha,
-            cuotas: {
-              create: cuotas.map((c: any) => ({
-                numero: c.numero,
-                fechaVencimiento: c.fechaVencimiento,
-                montoEsperado: c.monto,
-                estado: 'PENDIENTE'
-              }))
-            }
-          }
-        })
-      ])
-      
-      revalidatePath(`/prestamo/${prestamoId}`)
-      redirect(`/prestamo/${prestamoId}`)
-      return
+      nuevasCuotas.push({
+        numero: i,
+        fechaVencimiento: fechaVencimiento,
+        montoEsperado: montoPorCuota,
+        estado: 'PENDIENTE'
+      })
     }
+
+    // Usamos una Transacción para que se haga todo junto de forma segura
+    await prisma.$transaction([
+      prisma.cuota.deleteMany({ where: { prestamoId: prestamoId } }),
+      prisma.prestamo.update({
+        where: { id: prestamoId },
+        data: {
+          clienteId: clienteIdFinal,
+          fechaInicio: fechaInicio,
+          montoCapital: monto,
+          interesPorcentaje: interesMensual,
+          plazo: numeroCuotas,
+          frecuencia: frecuencia,
+          moraDiaria: moraDiaria,
+          cuotas: { create: nuevasCuotas }
+        }
+      })
+    ])
   }
 
-  // Si solo cambió cliente
-  await prisma.prestamo.update({
-    where: { id: prestamoId },
-    data: { clienteId: nuevoClienteId }
-  })
-
+  // Refrescar y volver a la página del préstamo
+  revalidatePath('/')
   revalidatePath(`/prestamo/${prestamoId}`)
   redirect(`/prestamo/${prestamoId}`)
 }

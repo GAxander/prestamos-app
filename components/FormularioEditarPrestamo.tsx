@@ -15,12 +15,21 @@ type Props = {
 }
 
 export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) {
+  const hayPagos = prestamo.cuotas.some((c: any) => c.estado === 'PAGADO')
+
   const [nombre, setNombre] = useState(prestamo.cliente.nombre)
   const [sugerencias, setSugerencias] = useState<Cliente[]>([])
   const [mostrarLista, setMostrarLista] = useState(false)
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
-  
-  const hayPagos = prestamo.cuotas.some((c: any) => c.estado === 'PAGADO')
+  const [cargando, setCargando] = useState(false)
+
+  // Nuevos estados para edición completa
+  const [fechaInicio, setFechaInicio] = useState(new Date(prestamo.fechaInicio).toISOString().split('T')[0])
+  const [monto, setMonto] = useState(Number(prestamo.montoCapital))
+  const [frecuencia, setFrecuencia] = useState(prestamo.frecuencia)
+  const [cuotas, setCuotas] = useState(prestamo.plazo)
+  const [interes, setInteres] = useState(Number(prestamo.interesPorcentaje))
+  const [mora, setMora] = useState(Number(prestamo.moraDiaria || 0))
 
   const manejarBusqueda = (texto: string) => {
     setNombre(texto)
@@ -40,33 +49,46 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
     setMostrarLista(false)
   }
 
+  const handleSubmit = async (formData: FormData) => {
+    setCargando(true)
+    try {
+      await actualizarPrestamo(formData)
+    } catch (error: any) {
+      if (error?.message === 'NEXT_REDIRECT' || error?.digest?.startsWith('NEXT_REDIRECT')) {
+        throw error; 
+      }
+      alert("Error al actualizar el préstamo.")
+      setCargando(false)
+    }
+  }
+
   return (
     <div className="p-6 space-y-8">
-      {/* FORMULARIO DE EDICIÓN */}
-      <form action={actualizarPrestamo} className="space-y-4">
+      
+      {hayPagos && (
+        <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg flex items-start gap-2 animate-in fade-in">
+          <span className="text-xl">⚠️</span>
+          <div>
+            <p className="text-xs font-bold text-orange-800 uppercase">Préstamo con Pagos</p>
+            <p className="text-[10px] text-orange-600 mt-0.5">Ya existen abonos. Por seguridad contable, los montos y fechas están bloqueados. Si necesitas reestructurar, usa la opción <strong>Refinanciar</strong>.</p>
+          </div>
+        </div>
+      )}
+
+      <form action={handleSubmit} className="space-y-4">
         <input type="hidden" name="prestamoId" value={prestamo.id} />
         
         <div className="space-y-2 relative">
-          <label className="text-sm font-bold text-gray-700">Cambiar Dueño (Cliente)</label>
+          <label className="text-sm font-bold text-gray-700">Dueño del Préstamo</label>
           <div className="relative">
-            {/* 👇 TEXTO OSCURO Y NÍTIDO APLICADO AQUÍ */}
             <input 
-              type="text" 
-              name="nombre"
-              value={nombre}
-              onChange={(e) => manejarBusqueda(e.target.value)}
-              autoComplete="off"
+              type="text" name="nombre" value={nombre} onChange={(e) => manejarBusqueda(e.target.value)} autoComplete="off"
               className="w-full p-3 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 font-medium placeholder:text-gray-400"
-              placeholder="Buscar cliente..."
             />
             {mostrarLista && sugerencias.length > 0 && (
               <ul className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-xl mt-1 max-h-40 overflow-y-auto">
                 {sugerencias.map((cliente) => (
-                  <li 
-                    key={cliente.id}
-                    onClick={() => seleccionarCliente(cliente.nombre)}
-                    className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 text-gray-900 font-medium"
-                  >
+                  <li key={cliente.id} onClick={() => seleccionarCliente(cliente.nombre)} className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 text-gray-900 font-medium">
                     {cliente.nombre}
                   </li>
                 ))}
@@ -75,21 +97,65 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-gray-700">Corregir Fecha Inicio</label>
-          {/* 👇 LÓGICA DE COLOR APLICADA AQUÍ (Negro si se puede editar, gris si está bloqueado) */}
-          <input 
-            name="fechaInicio" 
-            type="date" 
-            defaultValue={new Date(prestamo.fechaInicio).toISOString().split('T')[0]} 
-            className={`w-full p-3 border rounded-lg outline-none ${hayPagos ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-900 font-medium'}`}
-            readOnly={hayPagos} 
-          />
-          {hayPagos && <p className="text-[10px] text-red-500 font-bold">🚫 No puedes cambiar fecha con pagos activos.</p>}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">Monto Capital (S/)</label>
+            <input 
+              name="monto" type="number" value={monto} onChange={e => setMonto(Number(e.target.value))} readOnly={hayPagos}
+              className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">Fecha de Inicio</label>
+            <input 
+              name="fechaInicio" type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} readOnly={hayPagos} 
+              className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
+            />
+          </div>
         </div>
 
-        <button type="submit" className="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition-transform active:scale-95">
-          Guardar Cambios
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">Frecuencia</label>
+            {hayPagos ? (
+               <input name="frecuencia" type="text" value={frecuencia} readOnly className="w-full p-3 border rounded-lg outline-none font-medium bg-gray-100 text-gray-400" />
+            ) : (
+               <select name="frecuencia" value={frecuencia} onChange={e => setFrecuencia(e.target.value)} className="w-full p-3 bg-white border rounded-lg outline-none text-gray-900 font-medium">
+                 <option value="DIARIO">Diario</option>
+                 <option value="SEMANAL">Semanal</option>
+                 <option value="QUINCENAL">Quincenal</option>
+                 <option value="MENSUAL">Mensual</option>
+               </select>
+            )}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">N° Cuotas</label>
+            <input 
+              name="cuotas" type="number" value={cuotas} onChange={e => setCuotas(Number(e.target.value))} readOnly={hayPagos}
+              className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">Interés (%)</label>
+            <input 
+              name="interes" type="number" value={interes} onChange={e => setInteres(Number(e.target.value))} readOnly={hayPagos}
+              className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700">Mora Diaria</label>
+            <input 
+              name="moraDiaria" type="number" step="0.01" value={mora} onChange={e => setMora(Number(e.target.value))} readOnly={hayPagos}
+              className={`w-full p-3 border rounded-lg outline-none font-medium ${hayPagos ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'}`}
+            />
+          </div>
+        </div>
+
+        <button type="submit" disabled={cargando} className={`w-full py-4 text-white font-bold rounded-lg shadow-md transition-all active:scale-95 ${cargando ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
+          {cargando ? 'Guardando...' : 'Guardar Cambios 💾'}
         </button>
       </form>
 
@@ -100,47 +166,18 @@ export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) 
         <h3 className="text-red-800 font-bold text-sm mb-2">Zona de Peligro</h3>
         
         {!confirmarEliminar ? (
-          <>
-            <p className="text-xs text-red-600 mb-3">
-              Eliminar este préstamo borrará todo su historial permanentemente.
-            </p>
-            <button 
-              type="button" 
-              onClick={(e) => {
-                e.preventDefault(); 
-                e.stopPropagation();
-                setConfirmarEliminar(true);
-              }}
-              className="w-full py-2 bg-white border border-red-200 text-red-600 font-bold rounded-lg hover:bg-red-600 hover:text-white transition"
-            >
-              🗑 Eliminar Préstamo
-            </button>
-          </>
+          <button type="button" onClick={(e) => { e.preventDefault(); setConfirmarEliminar(true); }} className="w-full py-2 bg-white border border-red-200 text-red-600 font-bold rounded-lg hover:bg-red-600 hover:text-white transition">
+            🗑 Eliminar Préstamo
+          </button>
         ) : (
           <div className="animate-in fade-in zoom-in duration-200">
             <p className="text-sm font-black text-red-700 mb-1">⚠ ¿ESTÁS SEGURO?</p>
-            <p className="text-xs text-red-800 mb-3">
-              Se borrarán el préstamo, las cuotas y los pagos. <br/>
-              <strong>Esta acción es final.</strong>
-            </p>
-            
+            <p className="text-xs text-red-800 mb-3">Se borrarán el préstamo, las cuotas y los pagos permanentemente.</p>
             <div className="flex gap-2">
-               <button 
-                 type="button"
-                 onClick={() => setConfirmarEliminar(false)}
-                 className="w-1/2 py-2 bg-white border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-50 transition"
-               >
-                 Cancelar
-               </button>
-
+               <button type="button" onClick={() => setConfirmarEliminar(false)} className="w-1/2 py-2 bg-white border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-50">Cancelar</button>
                <form action={eliminarPrestamo} className="w-1/2">
                   <input type="hidden" name="prestamoId" value={prestamo.id} />
-                  <button 
-                    type="submit" 
-                    className="w-full py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-md transition"
-                  >
-                    ¡Sí, Eliminar!
-                  </button>
+                  <button type="submit" className="w-full py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">¡Sí, Eliminar!</button>
                </form>
             </div>
           </div>
