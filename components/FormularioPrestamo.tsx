@@ -25,9 +25,9 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
   const [interes, setInteres] = useState(10)
   const [cuotas, setCuotas] = useState(1)
   const [frecuencia, setFrecuencia] = useState('MENSUAL')
-  const [tipoMensual, setTipoMensual] = useState('30_DIAS')
+  // 👇 1. CAMBIO: Ahora nace preseleccionado en FECHA_FIJA
+  const [tipoMensual, setTipoMensual] = useState('FECHA_FIJA')
 
-  // 👇 NUEVOS ESTADOS PARA FECHAS
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0])
   const [fechaPrimerPago, setFechaPrimerPago] = useState('')
   const [modificoPrimerPago, setModificoPrimerPago] = useState(false)
@@ -55,13 +55,22 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
 
     setCalculo({ total, cuota: valorCuota, ganancia, tiempo: textoTiempo })
 
-    // 👇 MAGIA: Auto-calculamos el primer pago SOLO si tú no lo has modificado a mano
+    // 👇 2. CAMBIO: Lógica inteligente para el primer mes
     if (!modificoPrimerPago) {
-      const fechaBase = new Date(fechaInicio + 'T12:00:00') // Truco para zona horaria
-      fechaBase.setDate(fechaBase.getDate() + dias)
+      const fechaBase = new Date(fechaInicio + 'T12:00:00') 
+      
+      if (frecuencia === 'MENSUAL' && tipoMensual === 'FECHA_FIJA') {
+        // Salta exactamente al mismo número de día del mes siguiente
+        fechaBase.setMonth(fechaBase.getMonth() + 1)
+      } else {
+        // Suma los días (7, 15, o 30 si es la otra opción)
+        fechaBase.setDate(fechaBase.getDate() + dias)
+      }
+      
       setFechaPrimerPago(fechaBase.toISOString().split('T')[0])
     }
-  }, [monto, interes, cuotas, frecuencia, fechaInicio, modificoPrimerPago]) 
+  // 👇 Asegúrate de que tipoMensual esté en esta lista de dependencias
+  }, [monto, interes, cuotas, frecuencia, fechaInicio, modificoPrimerPago, tipoMensual]) 
 
   const handleNombreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const valor = e.target.value
@@ -180,7 +189,7 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
               onChange={e => setTipoMensual(e.target.value)}
               className="w-full p-2 bg-white border border-yellow-300 rounded-lg outline-none text-gray-900 text-sm font-medium focus:ring-2 focus:ring-yellow-400"
             >
-              <option value="FECHA_FIJA">El mismo día del mes (Ej: Todo los 15)</option>
+              <option value="FECHA_FIJA">El mismo día del mes (Ej: Todos los 15)</option>
               <option value="30_DIAS">Exactamente cada 30 días</option>
             </select>
           </div>
@@ -206,7 +215,6 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
           </div>
         </div>
 
-        {/* 👇 AQUÍ ESTÁ EL NUEVO SELECTOR DOBLE DE FECHAS */}
         <div className="grid grid-cols-2 gap-4">
            <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">Día de Entrega (Inicio)</label>
