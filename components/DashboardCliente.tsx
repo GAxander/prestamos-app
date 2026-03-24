@@ -32,17 +32,14 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
   const [busqueda, setBusqueda] = useState('')
   const [descargando, setDescargando] = useState(false)
 
-  // 1. Filtro de clientes
   const clientesFiltrados = clientes.filter(c => 
     c.nombre.toLowerCase().includes(busqueda.toLowerCase())
   )
 
-  // 👇 2. NUEVO: Ordenamos los Morosos (El más atrasado primero)
   const vencidosOrdenados = [...vencidos].sort((a, b) => 
     new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime()
   )
 
-  // 👇 3. NUEVO: Ordenamos los Próximos (El más cercano a la fecha de hoy primero)
   const porVencerOrdenados = [...porVencer].sort((a, b) => 
     new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime()
   )
@@ -149,14 +146,16 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         
         {/* VENCIDOS (ROJO) */}
-        <div className="bg-red-50 rounded-xl border border-red-100 overflow-hidden flex flex-col max-h-80">
-            <div className="px-4 py-3 border-b border-red-100 flex justify-between items-center bg-red-100/50">
+        {/* 👇 AQUI: Cambiamos max-h-80 por h-[400px] para fijar la altura */}
+        <div className="bg-red-50 rounded-xl border border-red-100 overflow-hidden flex flex-col h-[400px]">
+            {/* 👇 Añadimos shrink-0 a la cabecera para que no se aplaste */}
+            <div className="px-4 py-3 border-b border-red-100 flex justify-between items-center bg-red-100/50 shrink-0">
                 <h3 className="text-xs font-bold text-red-700 uppercase flex items-center gap-2">
                    🚨 Vencidos ({vencidosOrdenados.length} casos)
                 </h3>
             </div>
-            <div className="divide-y divide-red-100 overflow-y-auto">
-                {/* 👇 AQUI CAMBIAMOS vencidos.map POR vencidosOrdenados.map */}
+            {/* 👇 Añadimos flex-1 para que el contenido sí haga scroll */}
+            <div className="divide-y divide-red-100 overflow-y-auto flex-1">
                 {vencidosOrdenados.length === 0 ? (
                     <p className="text-xs text-red-300 p-4 text-center italic">¡Genial! No hay morosos hoy.</p>
                 ) : (
@@ -186,14 +185,13 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
         </div>
 
         {/* PRÓXIMOS (AMARILLO) */}
-        <div className="bg-yellow-50 rounded-xl border border-yellow-100 overflow-hidden flex flex-col max-h-80">
-            <div className="px-4 py-3 border-b border-yellow-100 flex justify-between items-center bg-yellow-100/50">
+        <div className="bg-yellow-50 rounded-xl border border-yellow-100 overflow-hidden flex flex-col h-[400px]">
+            <div className="px-4 py-3 border-b border-yellow-100 flex justify-between items-center bg-yellow-100/50 shrink-0">
                 <h3 className="text-xs font-bold text-yellow-700 uppercase flex items-center gap-2">
                    📅 Próximos Vencimientos
                 </h3>
             </div>
-            <div className="divide-y divide-yellow-100 overflow-y-auto">
-                {/* 👇 AQUI CAMBIAMOS porVencer.map POR porVencerOrdenados.map */}
+            <div className="divide-y divide-yellow-100 overflow-y-auto flex-1">
                 {porVencerOrdenados.length === 0 ? (
                     <p className="text-xs text-yellow-600 p-4 text-center italic">No hay cobros próximos.</p>
                 ) : (
