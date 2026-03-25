@@ -129,10 +129,10 @@ export default async function Home() {
   const porVencerAgrupados = agruparDeudas(listaPorVencer).slice(0, 5)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="pb-10 max-w-7xl mx-auto">
       <Header username={usuario?.username || 'Usuario'} />
 
-      <div className="relative">
+      <div className="relative animate-fade-in-up">
          <DashboardCliente 
             clientes={clientes} 
             totalCapitalEnCalle={capitalEnCalle} 

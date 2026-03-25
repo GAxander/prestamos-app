@@ -35,11 +35,11 @@ export default function BotonRecibo({ cliente, pago, saldoPendiente }: Props) {
   return (
     <button 
       onClick={generarRecibo}
-      className="ml-2 text-green-500 hover:text-green-700 hover:bg-green-50 p-1.5 rounded-full transition-colors flex items-center gap-1"
+      className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-transparent hover:border-emerald-200 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 active:scale-95 shadow-sm"
       title="Enviar Recibo por WhatsApp"
     >
-      <span className="text-lg">🧾</span>
-      <span className="text-[10px] font-bold uppercase hidden sm:inline">Recibo</span>
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+      <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline pt-0.5">Recibo</span>
     </button>
   )
 }

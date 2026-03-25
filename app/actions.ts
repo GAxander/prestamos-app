@@ -638,12 +638,15 @@ export async function eliminarCliente(clienteId: number) {
 export async function obtenerDatosParaBackup() {
   const userId = await verificarSesion()
 
-  // 1. Extraer Clientes con todos sus Préstamos y Pagos anidados
+  // 1. Extraer Clientes con todos sus Préstamos, Pagos y Cuotas Pendientes
   const clientesRaw = await prisma.cliente.findMany({
     where: { usuarioId: userId },
     include: {
       prestamos: {
-        include: { pagos: true }
+        include: { 
+          pagos: { where: { tipo: { not: 'ANULACION' } } },
+          cuotas: { where: { estado: 'PENDIENTE' } }
+        }
       }
     },
     orderBy: { nombre: 'asc' }
@@ -653,9 +656,10 @@ export async function obtenerDatosParaBackup() {
   const resumenClientes = clientesRaw.map(cliente => {
     let totalPrestado = 0
     let totalPagado = 0
+    let deudaPendienteExacta = 0
 
     cliente.prestamos.forEach(p => {
-      // Calculamos la deuda total de cada préstamo
+      // Proyectamos el préstamo originalmente
       let diasPorCuota = 1
       if (p.frecuencia === 'SEMANAL') diasPorCuota = 7
       if (p.frecuencia === 'QUINCENAL') diasPorCuota = 15
@@ -671,6 +675,13 @@ export async function obtenerDatosParaBackup() {
       p.pagos.forEach(pago => {
         totalPagado += Number(pago.monto)
       })
+
+      // Calculamos la deuda exacta actual sumando las cuotas que DE VERDAD faltan pagar
+      if (p.estado === 'ACTIVO' || p.estado === 'PENDIENTE') {
+        p.cuotas.forEach(cuota => {
+           deudaPendienteExacta += (Number(cuota.montoEsperado) - Number(cuota.montoPagado))
+        })
+      }
     })
 
     return {
@@ -678,9 +689,9 @@ export async function obtenerDatosParaBackup() {
       "Cliente": cliente.nombre,
       "Teléfono": cliente.telefono || 'Sin número',
       "Préstamos Activos": cliente.prestamos.filter(p => p.estado === 'ACTIVO').length,
-      "Total con Intereses (S/)": Number(totalPrestado.toFixed(2)),
+      "Total Histórico (S/)": Number(totalPrestado.toFixed(2)),
       "Total Pagado (S/)": Number(totalPagado.toFixed(2)),
-      "Deuda Pendiente (S/)": Number((totalPrestado - totalPagado).toFixed(2)),
+      "Deuda Pendiente (S/)": Number(deudaPendienteExacta.toFixed(2)),
       "Fecha Registro": cliente.createdAt.toLocaleDateString('es-PE')
     }
   })

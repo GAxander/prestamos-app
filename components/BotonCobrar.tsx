@@ -24,8 +24,8 @@ export default function BotonCobrar({ cuota, prestamoId, interesDiario }: Props)
   
   // Estados para Mora y Descuento
   const [diasDiferencia, setDiasDiferencia] = useState(0)
-  const [calculoExtra, setCalculoExtra] = useState(0) // Puede ser Mora (+) o Descuento (-)
-  const [liquidarDeuda, setLiquidarDeuda] = useState(false) // Checkbox para cerrar cuota
+  const [calculoExtra, setCalculoExtra] = useState(0) 
+  const [liquidarDeuda, setLiquidarDeuda] = useState(false) 
 
   // EFECTO: Calcular Mora O Descuento
   useEffect(() => {
@@ -44,11 +44,8 @@ export default function BotonCobrar({ cuota, prestamoId, interesDiario }: Props)
     setDiasDiferencia(dias);
 
     if (dias > 0) {
-      // MORA (Positivo)
       setCalculoExtra(dias * interesDiario);
     } else if (dias < 0) {
-      // DESCUENTO (Positivo visualmente, pero resta)
-      // Math.abs(dias) * interesDiario
       setCalculoExtra(Math.abs(dias) * interesDiario);
     } else {
       setCalculoExtra(0);
@@ -56,128 +53,137 @@ export default function BotonCobrar({ cuota, prestamoId, interesDiario }: Props)
 
   }, [fechaSeleccionada, cuota.fechaVencimiento, interesDiario])
 
-  // Botón para aplicar Mora
   const aplicarMora = () => {
      setMonto(prev => Number((prev + calculoExtra).toFixed(2)));
   }
 
-  // Botón para aplicar Descuento
   const aplicarDescuento = () => {
      const nuevoMonto = deudaRestante - calculoExtra;
      setMonto(nuevoMonto > 0 ? Number(nuevoMonto.toFixed(2)) : 0);
-     setLiquidarDeuda(true); // Marcamos automáticamente que queremos cerrar la cuota
+     setLiquidarDeuda(true);
   }
 
   if (abierto) {
     return (
-      <form 
-        action={registrarPago} 
-        onSubmit={() => setAbierto(false)} 
-        className="flex flex-col gap-3 bg-white p-4 rounded-xl border border-blue-200 shadow-2xl absolute right-0 z-50 w-72 animate-in fade-in zoom-in duration-200"
-      >
-        <div className="flex justify-between items-center">
-            <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wide">Registrar Pago</p>
-            <button type="button" onClick={() => setAbierto(false)} className="text-gray-400 hover:text-red-500 font-bold">✕</button>
-        </div>
-        
-        <input type="hidden" name="cuotaId" value={cuota.id} />
-        <input type="hidden" name="prestamoId" value={prestamoId} />
-        
-        {/* INPUT FECHA */}
-        <div>
-          <label className="text-[10px] text-gray-500 font-bold block mb-1">Fecha del Pago</label>
-          <input 
-            type="date" 
-            name="fecha"
-            value={fechaSeleccionada}
-            onChange={(e) => setFechaSeleccionada(e.target.value)}
-            className="w-full p-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-700 bg-gray-50"
-          />
-        </div>
+      <div className="absolute right-0 bottom-full mb-3 z-50 animate-in fade-in zoom-in duration-200">
+          <form 
+            action={registrarPago} 
+            onSubmit={() => setAbierto(false)} 
+            className="flex flex-col gap-4 bg-white/95 backdrop-blur-xl p-5 rounded-2xl border border-indigo-100 shadow-[0_10px_40px_-10px_rgba(99,102,241,0.3)] w-80 ring-1 ring-slate-900/5 relative"
+          >
+            {/* Flechita del popup */}
+            <div className="absolute -bottom-2 right-6 w-4 h-4 bg-white/95 border-b border-r border-indigo-100 transform rotate-45 z-[-1] backdrop-blur-xl ring-1 ring-slate-900/5"></div>
 
-        {/* --- LÓGICA DE ALERTAS --- */}
-        
-        {/* CASO A: MORA (ROJO) */}
-        {diasDiferencia > 0 && (
-          <div className="bg-red-50 border border-red-100 p-2.5 rounded-lg">
-             <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] text-red-600 font-bold">⚠ {diasDiferencia} días tarde</span>
-                <span className="text-xs text-red-700 font-black">+ S/ {calculoExtra.toFixed(2)}</span>
-             </div>
-             <button 
-               type="button" 
-               onClick={aplicarMora}
-               className="w-full bg-white border border-red-200 hover:bg-red-600 hover:text-white text-red-600 text-[10px] font-bold py-1.5 rounded transition-colors"
-             >
-               Sumar Mora
-             </button>
-          </div>
-        )}
-
-        {/* CASO B: DESCUENTO (VERDE) */}
-        {diasDiferencia < 0 && (
-          <div className="bg-green-50 border border-green-100 p-2.5 rounded-lg">
-             <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] text-green-600 font-bold">🎉 {Math.abs(diasDiferencia)} días antes</span>
-                <span className="text-xs text-green-700 font-black">- S/ {calculoExtra.toFixed(2)}</span>
-             </div>
-             <p className="text-[9px] text-green-500 mb-2">Ahorro por interés diario</p>
-             <button 
-               type="button" 
-               onClick={aplicarDescuento}
-               className="w-full bg-white border border-green-200 hover:bg-green-600 hover:text-white text-green-600 text-[10px] font-bold py-1.5 rounded transition-colors"
-             >
-               Aplicar Descuento
-             </button>
-          </div>
-        )}
-
-        {/* INPUT MONTO FINAL */}
-        <div>
-           <label className="text-[10px] text-gray-500 font-bold block mb-1">Monto a Abonar</label>
-           <div className="relative">
-              <span className="absolute left-3 top-2 text-gray-500 text-sm font-bold">S/</span>
+            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                <p className="text-xs font-black text-indigo-800 uppercase tracking-widest flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Recepcionar Pago
+                </p>
+                <button type="button" onClick={() => setAbierto(false)} className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            
+            <input type="hidden" name="cuotaId" value={cuota.id} />
+            <input type="hidden" name="prestamoId" value={prestamoId} />
+            
+            {/* INPUT FECHA */}
+            <div>
+              <label className="text-[10px] text-slate-500 font-bold block mb-1.5 uppercase tracking-wider">Fecha de Recibo</label>
               <input 
-                type="number" 
-                name="monto"
-                step="0.01"
-                value={monto}
-                onChange={(e) => setMonto(Number(e.target.value))}
-                className="w-full pl-8 pr-3 py-2 text-lg border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 font-black text-gray-800"
-                autoFocus
+                type="date" 
+                name="fecha"
+                value={fechaSeleccionada}
+                onChange={(e) => setFechaSeleccionada(e.target.value)}
+                className="w-full p-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 text-slate-800 font-bold bg-slate-50/50 shadow-sm cursor-pointer"
               />
-           </div>
-        </div>
+            </div>
 
-        {/* CHECKBOX DE LIQUIDACIÓN (Importante para descuentos) */}
-        <div className="flex items-center gap-2 mt-1">
-            <input 
-              type="checkbox" 
-              name="liquidar" 
-              id="liquidarCheck"
-              checked={liquidarDeuda}
-              onChange={(e) => setLiquidarDeuda(e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="liquidarCheck" className="text-[10px] text-gray-600 font-medium cursor-pointer leading-tight">
-              Marcar cuota como <strong>PAGADA TOTALMENTE</strong> (ajustar deuda)
-            </label>
-        </div>
+            {/* --- LÓGICA DE ALERTAS --- */}
+            {/* CASO A: MORA (ROJO) */}
+            {diasDiferencia > 0 && (
+              <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl shadow-inner">
+                 <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-[10px] text-rose-600 font-black uppercase tracking-wider">⚠ {diasDiferencia} días {diasDiferencia === 1 ? 'tarde' : 'tardes'}</span>
+                    <span className="text-sm text-rose-700 font-black">+ S/ {calculoExtra.toFixed(2)}</span>
+                 </div>
+                 <button 
+                   type="button" 
+                   onClick={aplicarMora}
+                   className="w-full bg-white border border-rose-200 hover:bg-rose-600 hover:text-white hover:border-rose-600 text-rose-600 font-bold text-[10px] uppercase tracking-widest py-2 rounded-lg transition-all active:scale-[0.98] shadow-sm"
+                 >
+                   Adicionar Mora al Cobro
+                 </button>
+              </div>
+            )}
 
-        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-xs font-bold shadow-md transition-transform active:scale-95">
-          Confirmar Pago
-        </button>
-      </form>
+            {/* CASO B: DESCUENTO (VERDE) */}
+            {diasDiferencia < 0 && (
+              <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl shadow-inner">
+                 <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] text-emerald-600 font-black uppercase tracking-wider">🎉 {Math.abs(diasDiferencia)} días antes</span>
+                    <span className="text-sm text-emerald-700 font-black">- S/ {calculoExtra.toFixed(2)}</span>
+                 </div>
+                 <p className="text-[9px] text-emerald-500 mb-2 font-medium">Recompensa por pronto pago</p>
+                 <button 
+                   type="button" 
+                   onClick={aplicarDescuento}
+                   className="w-full bg-white border border-emerald-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 text-emerald-600 font-bold text-[10px] uppercase tracking-widest py-2 rounded-lg transition-all active:scale-[0.98] shadow-sm"
+                 >
+                   Aplicar Descuento
+                 </button>
+              </div>
+            )}
+
+            {/* INPUT MONTO FINAL */}
+            <div>
+               <label className="text-[10px] text-slate-500 font-bold block mb-1.5 uppercase tracking-wider">Monto a Abonar</label>
+               <div className="relative">
+                  <span className="absolute left-4 top-2.5 text-indigo-400 font-black text-sm">S/</span>
+                  <input 
+                    type="number" 
+                    name="monto"
+                    step="0.01"
+                    value={monto}
+                    onChange={(e) => setMonto(Number(e.target.value))}
+                    className="w-full pl-9 pr-3 py-2.5 text-xl border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 font-black text-slate-800 shadow-inner bg-indigo-50/30"
+                    autoFocus
+                  />
+               </div>
+            </div>
+
+            {/* CHECKBOX DE LIQUIDACIÓN */}
+            <div className="flex items-start gap-2.5 mt-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                <input 
+                  type="checkbox" 
+                  name="liquidar" 
+                  id={`liquidarCheck-${cuota.id}`}
+                  checked={liquidarDeuda}
+                  onChange={(e) => setLiquidarDeuda(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                />
+                <label htmlFor={`liquidarCheck-${cuota.id}`} className="text-[10px] text-slate-600 font-medium cursor-pointer leading-tight">
+                  Marcar obligatoriamente como <strong className="text-slate-800 block mt-0.5">PAGADA TOTALMENTE</strong>
+                </label>
+            </div>
+
+            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 mt-2">
+              Confirmar Recibo
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            </button>
+          </form>
+      </div>
     )
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
         <button 
           onClick={() => setAbierto(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm shadow-blue-200 transition-transform active:scale-95"
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-widest py-3.5 rounded-xl shadow-md shadow-indigo-500/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-indigo-500"
         >
-          Cobrar
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+          Registrar Cobro
         </button>
     </div>
   )

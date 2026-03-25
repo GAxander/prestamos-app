@@ -17,27 +17,30 @@ export default function BotonCorregir({ cuotaId, montoPagadoActual }: Props) {
       <form 
         action={corregirPago} 
         onSubmit={() => setEditando(false)}
-        className="flex items-center gap-1 bg-white border border-yellow-300 rounded p-1 shadow-sm absolute right-0 top-6 z-10"
+        className="flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-amber-200 rounded-lg p-1.5 shadow-lg shadow-amber-500/10 absolute right-0 top-8 z-20 animate-in fade-in zoom-in duration-200"
       >
         <input type="hidden" name="cuotaId" value={cuotaId} />
-        <input 
-          type="number" 
-          name="nuevoMonto" 
-          step="0.01"
-          value={valor}
-          onChange={(e) => setValor(Number(e.target.value))}
-          className="w-20 p-1 text-xs border border-gray-300 rounded font-bold"
-          autoFocus
-        />
-        <button type="submit" className="bg-yellow-500 text-white px-2 py-1 rounded text-[10px] font-bold">
+        <div className="relative">
+            <span className="absolute left-1.5 top-1 text-slate-400 text-[10px] font-bold">S/</span>
+            <input 
+            type="number" 
+            name="nuevoMonto" 
+            step="0.01"
+            value={valor}
+            onChange={(e) => setValor(Number(e.target.value))}
+            className="w-20 pl-5 pr-1 py-1 text-xs border border-slate-200 rounded text-slate-800 font-bold focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 bg-slate-50 shadow-inner"
+            autoFocus
+            />
+        </div>
+        <button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm transition-colors active:scale-95">
           OK
         </button>
         <button 
           type="button" 
           onClick={() => setEditando(false)}
-          className="text-gray-400 hover:text-gray-600 px-1 font-bold text-xs"
+          className="w-6 h-6 flex items-center justify-center rounded bg-slate-100 text-slate-400 hover:text-rose-500 hover:bg-rose-50 font-bold transition-colors"
         >
-          ✕
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </form>
     )
@@ -49,10 +52,10 @@ export default function BotonCorregir({ cuotaId, montoPagadoActual }: Props) {
         setValor(montoPagadoActual) // Reseteamos el valor al abrir
         setEditando(true)
       }}
-      className="ml-2 text-gray-300 hover:text-blue-500 transition-colors"
-      title="Corregir monto pagado"
+      className="ml-1 w-6 h-6 flex items-center justify-center rounded-full bg-amber-50 border border-transparent hover:border-amber-200 text-amber-500 hover:text-amber-600 hover:bg-amber-100 transition-all active:scale-95"
+      title="Corregir monto abonado"
     >
-      ✏️
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
     </button>
   )
 }

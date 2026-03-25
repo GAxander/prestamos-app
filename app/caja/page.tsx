@@ -65,7 +65,7 @@ export default async function DashboardFinancieroPage() {
     }
   })
 
-  // 4. Cartera Activa (Dinero en la calle)
+  // 4. Cartera Activa (Dinero en la calle) - Corrección estructural: Sumar lo que realmente falta cobrar
   const prestamosActivos = prestamos.filter(p => p.estado === 'ACTIVO' || p.estado === 'PENDIENTE')
   
   const totalPrestado = Number(resumenPrestamos._sum.montoCapital || 0)
@@ -74,8 +74,42 @@ export default async function DashboardFinancieroPage() {
   const totalSalidasMes = Number(prestamosEsteMes._sum.montoCapital || 0)
   const flujoCajaMes = totalIngresosMes - totalSalidasMes
 
-  let totalDeudaExigible = (totalPrestado + gananciaTotalProyectada) - totalCobrado
-  if (totalDeudaExigible < 0) totalDeudaExigible = 0
+  // CONSULTA EXACTA DE DEUDA VIVA (Para no sufrir desfases por descuentos o moras)
+  const cuotasPendientes = await prisma.cuota.findMany({
+    where: { 
+      estado: 'PENDIENTE',
+      prestamo: { estado: { in: ['ACTIVO', 'PENDIENTE'] }, cliente: { usuarioId: userId } }
+    },
+    include: { prestamo: true }
+  })
+  
+  let capitalActivoPendiente = 0
+  let interesActivoPendiente = 0
+
+  cuotasPendientes.forEach(c => {
+    const deudaCuota = Number(c.montoEsperado) - Number(c.montoPagado)
+    const p = c.prestamo
+    
+    let diasPorCuota = 1
+    if (p.frecuencia === 'SEMANAL') diasPorCuota = 7
+    if (p.frecuencia === 'QUINCENAL') diasPorCuota = 15
+    if (p.frecuencia === 'MENSUAL') diasPorCuota = 30
+    
+    const duracionDias = p.plazo * diasPorCuota
+    const gananciaOriginal = Number(p.montoCapital) * (Number(p.interesPorcentaje) / 100) * (duracionDias / 30)
+    const totalAPagarOriginal = Number(p.montoCapital) + gananciaOriginal
+    
+    const ratioCapital = Number(p.montoCapital) / totalAPagarOriginal
+    const ratioInteres = gananciaOriginal / totalAPagarOriginal
+
+    capitalActivoPendiente += (deudaCuota * ratioCapital)
+    interesActivoPendiente += (deudaCuota * ratioInteres)
+  })
+
+  // Evitar NaN o Infinity en caso de divisiones extrañas
+  const finalCapitalActivo = isNaN(capitalActivoPendiente) ? 0 : capitalActivoPendiente
+  const finalInteresActivo = isNaN(interesActivoPendiente) ? 0 : interesActivoPendiente
+  const totalDeudaExigible = finalCapitalActivo + finalInteresActivo
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 pb-20">
@@ -91,84 +125,93 @@ export default async function DashboardFinancieroPage() {
         </Link>
       </div>
 
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-12">
         
-        {/* MÉTRICAS GLOBALES */}
+        {/* ESTADO ACTUAL (LO PRINCIPAL) */}
         <section>
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Métricas Globales (Histórico)</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-blue-50 rounded-bl-full -mr-4 -mt-4"></div>
-              <p className="text-gray-500 text-xs font-bold uppercase relative z-10">Capital Prestado Total</p>
-              <h3 className="text-3xl font-black text-blue-900 mt-2 relative z-10">{formatMoney(totalPrestado)}</h3>
-              <p className="text-[10px] text-gray-400 mt-1 relative z-10">Dinero que salió de caja</p>
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Estado Actual (Dinero en la Calle)</h2>
+          
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-200 mb-6">
+             <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Total por Cobrar</p>
+                  <h2 className="text-4xl font-black text-white">{formatMoney(totalDeudaExigible)}</h2>
+                  <p className="text-slate-400 text-sm mt-2">Saldo pendiente en {prestamosActivos.length} préstamos activos.</p>
+                </div>
+                <div className="hidden md:block text-right text-4xl">
+                   📉
+                </div>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-50 rounded-bl-full -mr-4 -mt-4"></div>
+              <p className="text-emerald-600/80 text-xs font-bold uppercase relative z-10">Capital Prestado Actualmente</p>
+              <h3 className="text-3xl font-black text-emerald-900 mt-2 relative z-10">{formatMoney(finalCapitalActivo)}</h3>
+              <p className="text-[10px] text-emerald-600/60 mt-1 relative z-10">Capital puro invertido en la calle</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-green-50 rounded-bl-full -mr-4 -mt-4"></div>
-              <p className="text-gray-500 text-xs font-bold uppercase relative z-10">Interés Generado</p>
-              <h3 className="text-3xl font-black text-green-600 mt-2 relative z-10">{formatMoney(gananciaTotalProyectada)}</h3>
-              <p className="text-[10px] text-gray-400 mt-1 relative z-10">Ganancia bruta total</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-purple-50 rounded-bl-full -mr-4 -mt-4"></div>
-              <p className="text-gray-500 text-xs font-bold uppercase relative z-10">Total Recaudado</p>
-              <h3 className="text-3xl font-black text-purple-900 mt-2 relative z-10">{formatMoney(totalCobrado)}</h3>
-              <p className="text-[10px] text-gray-400 mt-1 relative z-10">Capital + Interés recuperado</p>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-50 rounded-bl-full -mr-4 -mt-4"></div>
+              <p className="text-indigo-600/80 text-xs font-bold uppercase relative z-10">Interés por Cobrar</p>
+              <h3 className="text-3xl font-black text-indigo-900 mt-2 relative z-10">{formatMoney(finalInteresActivo)}</h3>
+              <p className="text-[10px] text-indigo-600/60 mt-1 relative z-10">Ganancia proyectada limpia pendiente</p>
             </div>
           </div>
         </section>
-
-        {/* DINERO EN LA CALLE */}
-        <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-200">
-           <div className="flex justify-between items-end">
-              <div>
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Dinero en la Calle</p>
-                <h2 className="text-4xl font-black text-white">{formatMoney(totalDeudaExigible)}</h2>
-                <p className="text-slate-400 text-sm mt-2">Saldo pendiente por cobrar a {prestamosActivos.length} prestamos activos.</p>
-              </div>
-              <div className="hidden md:block text-right">
-                 <div className="text-4xl">📉</div>
-              </div>
-           </div>
-        </div>
 
         {/* RENDIMIENTO MENSUAL */}
         <section>
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-              Rendimiento de {inicioMes.toLocaleDateString('es-PE', { month: 'long' })}
+              MES ACTUAL: {inicioMes.toLocaleDateString('es-PE', { month: 'long' })}
             </h2>
-            <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">En curso</span>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-100">
-              
               <div className="pb-4 md:pb-0 md:pr-4 text-center md:text-left">
                 <p className="text-[10px] font-bold text-gray-400 uppercase">Cobrado este mes</p>
                 <p className="text-2xl font-black text-gray-800 mt-1">{formatMoney(totalIngresosMes)}</p>
-                <p className="text-xs text-green-600 font-medium mt-1">Ingresos de caja</p>
+                <p className="text-xs text-emerald-600 font-medium mt-1">Ingresos de caja</p>
               </div>
-
               <div className="py-4 md:py-0 md:px-4 text-center md:text-left">
                 <p className="text-[10px] font-bold text-gray-400 uppercase">Prestado este mes</p>
                 <p className="text-2xl font-black text-gray-800 mt-1">{formatMoney(totalSalidasMes)}</p>
-                <p className="text-xs text-red-500 font-medium mt-1">Nuevos préstamos</p>
+                <p className="text-xs text-rose-500 font-medium mt-1">Nuevos préstamos</p>
               </div>
-
               <div className="pt-4 md:pt-0 md:pl-4 text-center md:text-left">
                 <p className="text-[10px] font-bold text-gray-400 uppercase">Flujo Neto Mensual</p>
-                <p className={`text-2xl font-black mt-1 ${flujoCajaMes >= 0 ? 'text-blue-600' : 'text-orange-500'}`}>
+                <p className={`text-2xl font-black mt-1 ${flujoCajaMes >= 0 ? 'text-emerald-600' : 'text-orange-500'}`}>
                   {flujoCajaMes > 0 ? '+' : ''}{formatMoney(flujoCajaMes)}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                   {flujoCajaMes >= 0 ? 'Excedente en caja' : 'Más salidas que entradas'}
                 </p>
               </div>
+            </div>
+          </div>
+        </section>
 
+        {/* MÉTRICAS GLOBALES (HISTÓRICO) */}
+        <section className="opacity-75 hover:opacity-100 transition-opacity">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Histórico Global (Desde el Inicio)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+              <p className="text-slate-500 text-[10px] font-bold uppercase">Capital Prestado Total</p>
+              <h3 className="text-xl font-black text-slate-800 mt-1">{formatMoney(totalPrestado)}</h3>
+              <p className="text-[10px] text-slate-400 mt-1">Dinero que ha salido en total</p>
+            </div>
+            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+              <p className="text-slate-500 text-[10px] font-bold uppercase">Interés Generado</p>
+              <h3 className="text-xl font-black text-slate-800 mt-1">{formatMoney(gananciaTotalProyectada)}</h3>
+              <p className="text-[10px] text-slate-400 mt-1">Ganancia teórica de todo el tiempo</p>
+            </div>
+            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+              <p className="text-slate-500 text-[10px] font-bold uppercase">Total Recaudado</p>
+              <h3 className="text-xl font-black text-slate-800 mt-1">{formatMoney(totalCobrado)}</h3>
+              <p className="text-[10px] text-slate-400 mt-1">Dinero recuperado a caja total</p>
             </div>
           </div>
         </section>
