@@ -174,7 +174,7 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                                         {item.cantidadCuotas} cuotas
                                     </span>
                                     <span className="text-[11px] font-medium text-slate-400">
-                                        Desde el {new Date(item.fechaVencimiento).toLocaleDateString('es-PE', {day:'2-digit', month:'short'})}
+                                        Desde el {new Date(item.fechaVencimiento).toLocaleDateString('es-PE', { timeZone: 'UTC', day:'2-digit', month:'short'})}
                                     </span>
                                 </div>
                             </div>
@@ -212,7 +212,7 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                                     <p className="text-base font-bold text-slate-800">{item.clienteNombre}</p>
                                     <div className="flex items-center gap-2 mt-1.5">
                                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${esHoy ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                                            {esHoy ? 'ES HOY' : new Date(item.fechaVencimiento).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'short' })}
+                                            {esHoy ? 'ES HOY' : new Date(item.fechaVencimiento).toLocaleDateString('es-PE', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'short' })}
                                         </span>
                                         {item.cantidadCuotas > 1 && (
                                            <span className="text-[10px] font-medium text-amber-600">({item.cantidadCuotas} cuotas pendientes)</span>
@@ -289,7 +289,7 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
                             {cliente.prestamos.map((p: any, index: number) => (
                               <Link key={p.id} href={`/prestamo/${p.id}`} className="block">
                                 <span className="inline-block px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[11px] font-bold uppercase tracking-wider rounded-lg border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-colors shadow-sm">
-                                  {p.montoCapital ? `S/ ${Number(p.montoCapital).toLocaleString('es-PE')} • ${new Date(p.fechaInicio).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}` : `Préstamo ${index + 1}`}
+                                  {p.montoCapital ? `S/ ${Number(p.montoCapital).toLocaleString('es-PE')} • ${new Date(p.fechaInicio).toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: 'short' })}` : `Préstamo ${index + 1}`}
                                 </span>
                               </Link>
                             ))}

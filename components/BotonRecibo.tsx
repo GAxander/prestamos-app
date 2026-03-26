@@ -9,7 +9,7 @@ type Props = {
 export default function BotonRecibo({ cliente, pago, saldoPendiente }: Props) {
   
   const generarRecibo = () => {
-    const fecha = new Date(pago.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
+    const fecha = new Date(pago.fecha).toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: 'long', year: 'numeric' })
     const hora = new Date(pago.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
     
     // EMOJIS Y TEXTO DEL RECIBO

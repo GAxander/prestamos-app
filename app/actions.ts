@@ -709,7 +709,7 @@ export async function obtenerDatosParaBackup() {
     "Frecuencia": p.frecuencia,
     "Cuotas": p.plazo,
     "Estado": p.estado,
-    "Fecha Inicio": p.fechaInicio.toLocaleDateString('es-PE')
+    "Fecha Inicio": p.fechaInicio.toLocaleDateString('es-PE', { timeZone: 'UTC' })
   })))
 
   // 4. Extraer Historial de Pagos (Con nombre de cliente)
@@ -722,7 +722,7 @@ export async function obtenerDatosParaBackup() {
     "Cliente": p.prestamo.cliente.nombre,
     "Préstamo #": p.prestamoId,
     "Monto Pagado (S/)": Number(p.monto),
-    "Fecha": p.fecha.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+    "Fecha": p.fecha.toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: 'short', year: 'numeric' })
   })))
 
   // Retornamos la info ya masticada para el Excel

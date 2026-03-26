@@ -67,7 +67,7 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
 
   if (vencidas.length > 0) {
       const totalVencido = vencidas.reduce((sum, c) => sum + (Number(c.montoEsperado) - Number(c.montoPagado)), 0)
-      const fechaMasAntigua = new Date(vencidas[0].fechaVencimiento).toLocaleDateString('es-PE', { day: '2-digit', month: 'long' })
+      const fechaMasAntigua = new Date(vencidas[0].fechaVencimiento).toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: 'long' })
 
       mensaje += `\n\n⚠️ *TIENE CUOTAS ATRASADAS*`
       mensaje += `\nCantidad: *${vencidas.length} cuota(s) vencida(s)*`
@@ -78,7 +78,7 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
 
   if (porVencer.length > 0) {
       const siguiente = porVencer[0]
-      const fecha = new Date(siguiente.fechaVencimiento).toLocaleDateString('es-PE', { day: '2-digit', month: 'long' })
+      const fecha = new Date(siguiente.fechaVencimiento).toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: 'long' })
       const monto = Number(siguiente.montoEsperado) - Number(siguiente.montoPagado)
 
       mensaje += `\n\n📅 *Próximo Vencimiento:*`
@@ -165,7 +165,7 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
           <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4 text-left md:text-center divide-x-0 md:divide-x divide-slate-100">
              <div className="bg-slate-50 md:bg-transparent p-3 md:p-0 rounded-xl md:rounded-none border border-slate-100 md:border-none">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Inicio</p>
-                <p className="text-sm font-black text-slate-700">{prestamo.fechaInicio.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                <p className="text-sm font-black text-slate-700">{prestamo.fechaInicio.toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: 'short', year: 'numeric' })}</p>
              </div>
              <div className="bg-slate-50 md:bg-transparent p-3 md:p-0 rounded-xl md:rounded-none border border-slate-100 md:border-none">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Capital Original</p>
@@ -241,7 +241,7 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
                             {esParcial && <span className="text-[9px] bg-amber-100/80 text-amber-700 px-1.5 py-0.5 rounded uppercase font-black tracking-wider">Abono</span>}
                         </div>
                         <p className={`text-xs font-medium ${estaVencida ? 'text-rose-500' : 'text-slate-500'}`}>
-                            {fechaVencimiento.toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short' })}
+                            {fechaVencimiento.toLocaleDateString('es-PE', { timeZone: 'UTC', weekday: 'short', day: '2-digit', month: 'short' })}
                         </p>
                     </div>
                     </div>
@@ -312,7 +312,7 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
                         </div>
                         <div>
                         <p className="text-xs text-slate-400 font-medium mb-0.5">
-                            {new Date(pago.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}
+                            {new Date(pago.fecha).toLocaleDateString('es-PE', { timeZone: 'UTC', day: '2-digit', month: 'long', year: 'numeric' })}
                         </p>
                         <p className="text-sm font-bold text-slate-700">{pago.nota || 'Pago registrado'}</p>
                         </div>
