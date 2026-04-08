@@ -746,16 +746,20 @@ export async function guardarConfiguracionRespaldo(formData: FormData) {
   const userId = await verificarSesion()
   const emailDestino = formData.get('emailDestino')
   const frecuenciaBackup = formData.get('frecuenciaBackup')
+  
+  const diaSemana = formData.get('diaSemanaBackup')
+  const diaMes = formData.get('diaMesBackup')
 
   await prisma.usuario.update({
     where: { id: userId },
     data: {
       emailDestino: emailDestino ? String(emailDestino) : null,
-      frecuenciaBackup: frecuenciaBackup ? String(frecuenciaBackup) : 'NUNCA'
+      frecuenciaBackup: frecuenciaBackup ? String(frecuenciaBackup) : 'NUNCA',
+      diaSemanaBackup: diaSemana ? Number(diaSemana) : 1,
+      diaMesBackup: diaMes ? Number(diaMes) : 1
     }
   })
 
-  // Necesitamos importar revalidatePath si no lo está, pero ya está importado arriba en el archivo
   revalidatePath('/configuracion')
 }
 

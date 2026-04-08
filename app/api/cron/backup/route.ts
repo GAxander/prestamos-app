@@ -39,11 +39,23 @@ export async function GET(request: Request) {
       if (!ultimo) {
         tocaEnviar = true
       } else {
-        const diffDias = Math.floor((ahora.getTime() - ultimo.getTime()) / (1000 * 60 * 60 * 24))
+        // En Javascript getDay() da 0 para Domingo, 1 para Lunes. Lo ajustamos: 1 Lunes a 7 Domingo.
+        const diaSemanaActual = ahora.getDay() === 0 ? 7 : ahora.getDay()
+        const diaMesActual = ahora.getDate()
         
-        if (usuario.frecuenciaBackup === 'DIARIO' && diffDias >= 1) tocaEnviar = true
-        if (usuario.frecuenciaBackup === 'SEMANAL' && diffDias >= 7) tocaEnviar = true
-        if (usuario.frecuenciaBackup === 'MENSUAL' && diffDias >= 30) tocaEnviar = true
+        const ultimoIso = ultimo.toISOString().split('T')[0]
+        const hoyIso = ahora.toISOString().split('T')[0]
+        const seEnvioHoy = ultimoIso === hoyIso
+
+        if (!seEnvioHoy) {
+          if (usuario.frecuenciaBackup === 'DIARIO') {
+            tocaEnviar = true
+          } else if (usuario.frecuenciaBackup === 'SEMANAL' && diaSemanaActual === (usuario.diaSemanaBackup || 1)) {
+            tocaEnviar = true
+          } else if (usuario.frecuenciaBackup === 'MENSUAL' && diaMesActual === (usuario.diaMesBackup || 1)) {
+            tocaEnviar = true
+          }
+        }
       }
 
       if (tocaEnviar) {

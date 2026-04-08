@@ -15,6 +15,8 @@ model Usuario {
   // Configuración de Respaldo
   emailDestino        String?
   frecuenciaBackup    String?   @default("NUNCA") // NUNCA, DIARIO, SEMANAL, MENSUAL
+  diaSemanaBackup     Int?      // 1 (Lunes) a 7 (Domingo)
+  diaMesBackup        Int?      // 1 a 31
   ultimoBackupEnviado DateTime?
 
   clientes Cliente[]
