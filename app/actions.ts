@@ -758,3 +758,60 @@ export async function guardarConfiguracionRespaldo(formData: FormData) {
   // Necesitamos importar revalidatePath si no lo está, pero ya está importado arriba en el archivo
   revalidatePath('/configuracion')
 }
+
+// --- 10. ENVIO MANUAL DE RESPALDO ---
+export async function enviarRespaldoManual() {
+  const userId = await verificarSesion();
+  const usuario = await prisma.usuario.findUnique({ where: { id: userId } });
+
+  if (!usuario?.emailDestino) {
+    throw new Error("No hay correo configurado. Por favor guarda un correo destino primero.");
+  }
+
+  // Import dynamic para evitar conflictos
+  const nodemailer = require('nodemailer');
+  const XLSX = require('xlsx');
+
+  // Reusar funcion de dashboard
+  const datos = await obtenerDatosParaBackup();
+
+  const wb = XLSX.utils.book_new();
+  const wsClientes = XLSX.utils.json_to_sheet(datos.clientes.length ? datos.clientes : [{ Vacio: "Sin datos" }]);
+  const wsPrestamos = XLSX.utils.json_to_sheet(datos.prestamos.length ? datos.prestamos : [{ Vacio: "Sin datos" }]);
+  const wsPagos = XLSX.utils.json_to_sheet(datos.pagos.length ? datos.pagos : [{ Vacio: "Sin datos" }]);
+
+  XLSX.utils.book_append_sheet(wb, wsClientes, "Clientes");
+  XLSX.utils.book_append_sheet(wb, wsPrestamos, "Préstamos");
+  XLSX.utils.book_append_sheet(wb, wsPagos, "Pagos");
+
+  const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      throw new Error("Credenciales SMTP no configuradas en el servidor (.env).");
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  const fechaStr = new Date().toISOString().split('T')[0];
+
+  await transporter.sendMail({
+    from: '"Sistema de Préstamos" <' + process.env.SMTP_USER + '>',
+    to: usuario.emailDestino,
+    subject: '📊 Respaldo Manual - ' + fechaStr,
+    text: 'Hola,\n\nHas solicitado un respaldo manual de tu sistema.\nAdjunto encontrarás el Excel actualizado.\n\nUn saludo.',
+    attachments: [
+      {
+        filename: 'Backup_Manual_' + fechaStr + '.xlsx',
+        content: excelBuffer
+      }
+    ]
+  });
+}

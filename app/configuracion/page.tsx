@@ -1,5 +1,6 @@
 import { obtenerConfiguracionRespaldo, guardarConfiguracionRespaldo } from '@/app/actions'
 import Header from '@/components/Header'
+import BotonEnviarRespaldo from '@/components/BotonEnviarRespaldo'
 
 export default async function ConfiguracionPage() {
   const config = await obtenerConfiguracionRespaldo()
@@ -58,6 +59,7 @@ export default async function ConfiguracionPage() {
                   <option value="SEMANAL">Semanal (Cada lunes)</option>
                   <option value="MENSUAL">Mensual (Cada inicio de mes)</option>
                 </select>
+                <BotonEnviarRespaldo />
               </div>
             </div>
 
