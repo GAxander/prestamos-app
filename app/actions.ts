@@ -732,30 +732,29 @@ export async function obtenerDatosParaBackup() {
     pagos: pagos 
   }
 }
- / /   - - -   9 .   C O N F I G U R A C I � N   D E   R E S P A L D O   - - - 
- e x p o r t   a s y n c   f u n c t i o n   o b t e n e r C o n f i g u r a c i o n R e s p a l d o ( )   { 
-     c o n s t   u s e r I d   =   a w a i t   v e r i f i c a r S e s i o n ( ) 
-     c o n s t   u s u a r i o   =   a w a i t   p r i s m a . u s u a r i o . f i n d U n i q u e ( { 
-         w h e r e :   {   i d :   u s e r I d   } , 
-         s e l e c t :   {   e m a i l D e s t i n o :   t r u e ,   f r e c u e n c i a B a c k u p :   t r u e   } 
-     } ) 
-     r e t u r n   u s u a r i o 
- } 
- 
- e x p o r t   a s y n c   f u n c t i o n   g u a r d a r C o n f i g u r a c i o n R e s p a l d o ( f o r m D a t a :   F o r m D a t a )   { 
-     c o n s t   u s e r I d   =   a w a i t   v e r i f i c a r S e s i o n ( ) 
-     c o n s t   e m a i l D e s t i n o   =   f o r m D a t a . g e t ( ' e m a i l D e s t i n o ' )   a s   s t r i n g 
-     c o n s t   f r e c u e n c i a B a c k u p   =   f o r m D a t a . g e t ( ' f r e c u e n c i a B a c k u p ' )   a s   s t r i n g 
- 
-     a w a i t   p r i s m a . u s u a r i o . u p d a t e ( { 
-         w h e r e :   {   i d :   u s e r I d   } , 
-         d a t a :   { 
-             e m a i l D e s t i n o :   e m a i l D e s t i n o   | |   n u l l , 
-             f r e c u e n c i a B a c k u p :   f r e c u e n c i a B a c k u p   | |   ' N U N C A ' 
-         } 
-     } ) 
- 
-     r e v a l i d a t e P a t h ( ' / c o n f i g u r a c i o n ' ) 
- } 
-  
- 
+// --- 9. CONFIGURACIÓN DE RESPALDO ---
+export async function obtenerConfiguracionRespaldo() {
+  const userId = await verificarSesion()
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: userId },
+    select: { emailDestino: true, frecuenciaBackup: true }
+  })
+  return usuario
+}
+
+export async function guardarConfiguracionRespaldo(formData: FormData) {
+  const userId = await verificarSesion()
+  const emailDestino = formData.get('emailDestino')
+  const frecuenciaBackup = formData.get('frecuenciaBackup')
+
+  await prisma.usuario.update({
+    where: { id: userId },
+    data: {
+      emailDestino: emailDestino ? String(emailDestino) : null,
+      frecuenciaBackup: frecuenciaBackup ? String(frecuenciaBackup) : 'NUNCA'
+    }
+  })
+
+  // Necesitamos importar revalidatePath si no lo está, pero ya está importado arriba en el archivo
+  revalidatePath('/configuracion')
+}
