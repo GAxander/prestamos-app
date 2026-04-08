@@ -6,9 +6,26 @@ import BotonEnviarRespaldo from '@/components/BotonEnviarRespaldo'
 
 export default function FormularioConfiguracionBackup({ config }: { config: any }) {
   const [frecuencia, setFrecuencia] = useState(config?.frecuenciaBackup || 'NUNCA')
+  const [guardando, setGuardando] = useState(false)
+
+  const handleGuardar = async (formData: FormData) => {
+    setGuardando(true)
+    try {
+      // Por si React no inyecta el select controlado en el form data
+      if (!formData.get('frecuenciaBackup')) {
+        formData.append('frecuenciaBackup', frecuencia)
+      }
+      await guardarConfiguracionRespaldo(formData)
+      alert('✅ ¡Configuración e intervalos de Correo guardados correctamente!')
+    } catch (error) {
+      alert('❌ Hubo un error al guardar. Revisa tu conexión.')
+    } finally {
+      setGuardando(false)
+    }
+  }
 
   return (
-    <form action={guardarConfiguracionRespaldo} className="p-6 md:p-8 space-y-6">
+    <form action={handleGuardar} className="p-6 md:p-8 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Correo Destino</label>
@@ -83,10 +100,11 @@ export default function FormularioConfiguracionBackup({ config }: { config: any 
       <div className="pt-6 border-t border-slate-100 flex justify-end">
          <button 
            type="submit" 
-           className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center gap-2"
+           disabled={guardando}
+           className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center gap-2 disabled:opacity-50"
          >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
-            Guardar Configuración
+            {guardando ? 'Guardando...' : 'Guardar Configuración'}
          </button>
       </div>
     </form>
