@@ -737,7 +737,7 @@ export async function obtenerConfiguracionRespaldo() {
   const userId = await verificarSesion()
   const usuario = await prisma.usuario.findUnique({
     where: { id: userId },
-    select: { emailDestino: true, frecuenciaBackup: true }
+    select: { emailDestino: true, frecuenciaBackup: true, diaSemanaBackup: true, diaMesBackup: true }
   })
   return usuario
 }

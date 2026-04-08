@@ -1,20 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { guardarConfiguracionRespaldo } from '@/app/actions'
 import BotonEnviarRespaldo from '@/components/BotonEnviarRespaldo'
 import toast, { Toaster } from 'react-hot-toast'
 
 export default function FormularioConfiguracionBackup({ config }: { config: any }) {
   const [frecuencia, setFrecuencia] = useState(config?.frecuenciaBackup || 'NUNCA')
+  const [diaSemana, setDiaSemana] = useState(config?.diaSemanaBackup?.toString() || '1')
+  const [diaMes, setDiaMes] = useState(config?.diaMesBackup?.toString() || '1')
   const [guardando, setGuardando] = useState(false)
+
+  // Esta trampa asegura que si el servidor refresca el componente al guardar,
+  // la interfaz refleje los nuevos datos exactamente como se guardaron.
+  useEffect(() => {
+    if (config) {
+      setFrecuencia(config.frecuenciaBackup || 'NUNCA')
+      setDiaSemana(config.diaSemanaBackup?.toString() || '1')
+      setDiaMes(config.diaMesBackup?.toString() || '1')
+    }
+  }, [config])
 
   const handleGuardar = async (formData: FormData) => {
     setGuardando(true)
     const toastId = toast.loading('Guardando configuración...')
     try {
-      // Forzamos que se envíe el valor contenido en la memoria de React
+      // Forzamos la máxima prioridad de React para que lo que ves en pantalla
+      // sea lo que se inserta matemáticamente en la BBDD
       formData.set('frecuenciaBackup', frecuencia)
+      formData.set('diaSemanaBackup', diaSemana)
+      formData.set('diaMesBackup', diaMes)
       
       await guardarConfiguracionRespaldo(formData)
       toast.success('¡Intervalos guardados correctamente!', { id: toastId })
@@ -71,7 +86,8 @@ export default function FormularioConfiguracionBackup({ config }: { config: any 
            <label className="block text-xs font-black text-indigo-700 uppercase tracking-wider mb-2">¿Qué día de la semana?</label>
            <select 
               name="diaSemanaBackup"
-              defaultValue={config?.diaSemanaBackup || '1'}
+              value={diaSemana}
+              onChange={(e) => setDiaSemana(e.target.value)}
               className="w-full p-3 bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none text-slate-800 font-bold transition-all shadow-sm cursor-pointer"
             >
               <option value="1">Lunes</option>
@@ -90,11 +106,12 @@ export default function FormularioConfiguracionBackup({ config }: { config: any 
            <label className="block text-xs font-black text-violet-700 uppercase tracking-wider mb-2">¿Qué día del mes?</label>
            <select 
               name="diaMesBackup"
-              defaultValue={config?.diaMesBackup || '1'}
+              value={diaMes}
+              onChange={(e) => setDiaMes(e.target.value)}
               className="w-full p-3 bg-white border border-violet-200 rounded-xl focus:ring-2 focus:ring-violet-400 outline-none text-slate-800 font-bold transition-all shadow-sm cursor-pointer"
             >
               {Array.from({length: 31}, (_, i) => i + 1).map(dia => (
-                <option key={dia} value={dia}>Día {dia}</option>
+                <option key={dia} value={dia.toString()}>Día {dia}</option>
               ))}
             </select>
         </div>
