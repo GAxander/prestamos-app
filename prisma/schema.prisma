@@ -11,6 +11,12 @@ model Usuario {
   id       Int       @id @default(autoincrement())
   username String    @unique
   password String
+
+  // Configuración de Respaldo
+  emailDestino        String?
+  frecuenciaBackup    String?   @default("NUNCA") // NUNCA, DIARIO, SEMANAL, MENSUAL
+  ultimoBackupEnviado DateTime?
+
   clientes Cliente[]
 }
 
