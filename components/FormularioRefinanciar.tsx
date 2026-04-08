@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { procesarRenovacion } from '@/app/actions'
 import Link from 'next/link'
 
@@ -26,6 +26,7 @@ export default function FormularioRefinanciar({ prestamo, deudaReal }: Props) {
   const [fechaPrimerPago, setFechaPrimerPago] = useState('')
   const [modificoPrimerPago, setModificoPrimerPago] = useState(false)
   const [cargando, setCargando] = useState(false)
+  const isSubmittingRef = useRef(false)
 
   const [resumen, setResumen] = useState({ nuevoCapitalBase: 0, interesGenerado: 0, totalDeudaNueva: 0, montoCuota: 0, tiempoEstimado: '' })
 
@@ -63,6 +64,8 @@ export default function FormularioRefinanciar({ prestamo, deudaReal }: Props) {
   }, [deudaActual, pagoHoy, aumentoCapital, nuevoInteres, nuevasCuotas, nuevaFrecuencia, fechaRenovacion, modificoPrimerPago, tipoMensual])
 
   const handleSubmit = async (formData: FormData) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setCargando(true)
     try {
       await procesarRenovacion(formData)
@@ -70,6 +73,7 @@ export default function FormularioRefinanciar({ prestamo, deudaReal }: Props) {
       if (error?.message === 'NEXT_REDIRECT' || error?.digest?.startsWith('NEXT_REDIRECT')) throw error;
       alert("Hubo un error al refinanciar.")
       setCargando(false)
+      isSubmittingRef.current = false;
     }
   }
 

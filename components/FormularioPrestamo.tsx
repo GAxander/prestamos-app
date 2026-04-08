@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { crearPrestamo } from '@/app/actions'
 
 type ClienteCorto = {
@@ -34,6 +34,7 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
   const [mora, setMora] = useState(0)
   const [calculo, setCalculo] = useState({ total: 0, cuota: 0, ganancia: 0, tiempo: '' })
   const [cargando, setCargando] = useState(false)
+  const isSubmittingRef = useRef(false)
 
   useEffect(() => {
     let dias = 1
@@ -92,6 +93,8 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
   }
 
   const handleSubmit = async (formData: FormData) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setCargando(true) 
     try {
       await crearPrestamo(formData) 
@@ -101,6 +104,7 @@ export default function FormularioPrestamo({ clientesExistentes = [] }: Props) {
       }
       alert("Hubo un error al crear el préstamo. Por favor revisa los datos.")
       setCargando(false)
+      isSubmittingRef.current = false;
     }
   }
 
