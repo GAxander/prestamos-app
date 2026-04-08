@@ -21,7 +21,7 @@ export default function FormularioConfiguracionBackup({ config }: { config: any 
     }
   }, [config])
 
-  const handleGuardar = async (formData: FormData) => {
+  const handleGuardar = async (e: any) => {\n    e.preventDefault();\n    const formData = new FormData(e.currentTarget);
     setGuardando(true)
     const toastId = toast.loading('Guardando configuración...')
     try {
@@ -43,7 +43,7 @@ export default function FormularioConfiguracionBackup({ config }: { config: any 
   return (
     <>
       <Toaster position="top-center" reverseOrder={false} />
-      <form action={handleGuardar} className="p-6 md:p-8 space-y-6">
+      <form onSubmit={handleGuardar} className="p-6 md:p-8 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Correo Destino</label>
