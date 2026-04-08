@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { guardarConfiguracionRespaldo } from '@/app/actions'
 import BotonEnviarRespaldo from '@/components/BotonEnviarRespaldo'
 import toast, { Toaster } from 'react-hot-toast'
@@ -11,17 +11,11 @@ export default function FormularioConfiguracionBackup({ config }: { config: any 
   const [diaMes, setDiaMes] = useState(config?.diaMesBackup?.toString() || '1')
   const [guardando, setGuardando] = useState(false)
 
-  // Esta trampa asegura que si el servidor refresca el componente al guardar,
-  // la interfaz refleje los nuevos datos exactamente como se guardaron.
-  useEffect(() => {
-    if (config) {
-      setFrecuencia(config.frecuenciaBackup || 'NUNCA')
-      setDiaSemana(config.diaSemanaBackup?.toString() || '1')
-      setDiaMes(config.diaMesBackup?.toString() || '1')
-    }
-  }, [config])
 
-  const handleGuardar = async (e: any) => {\n    e.preventDefault();\n    const formData = new FormData(e.currentTarget);
+
+  const handleGuardar = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
     setGuardando(true)
     const toastId = toast.loading('Guardando configuración...')
     try {
