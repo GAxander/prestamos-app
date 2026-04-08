@@ -761,11 +761,12 @@ export async function guardarConfiguracionRespaldo(formData: FormData) {
 
 // --- 10. ENVIO MANUAL DE RESPALDO ---
 export async function enviarRespaldoManual() {
+  try {
   const userId = await verificarSesion();
   const usuario = await prisma.usuario.findUnique({ where: { id: userId } });
 
   if (!usuario?.emailDestino) {
-    throw new Error("No hay correo configurado. Por favor guarda un correo destino primero.");
+    return { success: false, error: "No hay correo configurado. Por favor guarda un correo destino en la configuración primero." };
   }
 
   // Import dynamic para evitar conflictos
@@ -787,7 +788,7 @@ export async function enviarRespaldoManual() {
   const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      throw new Error("Credenciales SMTP no configuradas en el servidor (.env).");
+      return { success: false, error: "Credenciales SMTP no configuradas en el servidor. Revisa tu archivo .env o Vercel." };
   }
 
   const transporter = nodemailer.createTransport({
@@ -814,4 +815,9 @@ export async function enviarRespaldoManual() {
       }
     ]
   });
+  
+  return { success: true };
+  } catch (err) {
+     return { success: false, error: err.message || "Error interno al enviar el correo." };
+  }
 }

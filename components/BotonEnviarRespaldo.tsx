@@ -9,10 +9,14 @@ export default function BotonEnviarRespaldo() {
   const manejarEnvio = async () => {
     try {
       setEnviando(true)
-      await enviarRespaldoManual()
-      alert("¡Respaldo enviado exitosamente a tu correo configurado!")
+      const res = await enviarRespaldoManual()
+      if (res.success) {
+        alert("¡Respaldo enviado exitosamente a tu correo configurado!")
+      } else {
+        alert("Hubo un error: " + res.error)
+      }
     } catch (error: any) {
-      alert("Hubo un error: " + (error.message || "Por favor verifica que guardaste un correo primero."))
+      alert("Hubo un error del sistema: " + (error.message || "Inténtalo nuevamente."))
     } finally {
       setEnviando(false)
     }
