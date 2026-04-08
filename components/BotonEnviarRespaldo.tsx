@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { enviarRespaldoManual } from '@/app/actions'
+import toast from 'react-hot-toast'
 
 export default function BotonEnviarRespaldo() {
   const [enviando, setEnviando] = useState(false)
@@ -11,12 +12,12 @@ export default function BotonEnviarRespaldo() {
       setEnviando(true)
       const res = await enviarRespaldoManual()
       if (res.success) {
-        alert("¡Respaldo enviado exitosamente a tu correo configurado!")
+        toast.success("¡Respaldo enviado exitosamente a tu correo configurado!", { duration: 4000 })
       } else {
-        alert("Hubo un error: " + res.error)
+        toast.error(res.error, { duration: 5000 })
       }
     } catch (error: any) {
-      alert("Hubo un error del sistema: " + (error.message || "Inténtalo nuevamente."))
+      toast.error(error.message || "Inténtalo nuevamente.", { duration: 5000 })
     } finally {
       setEnviando(false)
     }

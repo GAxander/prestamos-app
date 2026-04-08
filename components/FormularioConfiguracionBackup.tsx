@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { guardarConfiguracionRespaldo } from '@/app/actions'
 import BotonEnviarRespaldo from '@/components/BotonEnviarRespaldo'
+import toast, { Toaster } from 'react-hot-toast'
 
 export default function FormularioConfiguracionBackup({ config }: { config: any }) {
   const [frecuencia, setFrecuencia] = useState(config?.frecuenciaBackup || 'NUNCA')
@@ -10,22 +11,24 @@ export default function FormularioConfiguracionBackup({ config }: { config: any 
 
   const handleGuardar = async (formData: FormData) => {
     setGuardando(true)
+    const toastId = toast.loading('Guardando configuración...')
     try {
-      // Por si React no inyecta el select controlado en el form data
-      if (!formData.get('frecuenciaBackup')) {
-        formData.append('frecuenciaBackup', frecuencia)
-      }
+      // Forzamos que se envíe el valor contenido en la memoria de React
+      formData.set('frecuenciaBackup', frecuencia)
+      
       await guardarConfiguracionRespaldo(formData)
-      alert('✅ ¡Configuración e intervalos de Correo guardados correctamente!')
+      toast.success('¡Intervalos guardados correctamente!', { id: toastId })
     } catch (error) {
-      alert('❌ Hubo un error al guardar. Revisa tu conexión.')
+      toast.error('Hubo un error al guardar.', { id: toastId })
     } finally {
       setGuardando(false)
     }
   }
 
   return (
-    <form action={handleGuardar} className="p-6 md:p-8 space-y-6">
+    <>
+      <Toaster position="top-center" reverseOrder={false} />
+      <form action={handleGuardar} className="p-6 md:p-8 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Correo Destino</label>
@@ -108,5 +111,6 @@ export default function FormularioConfiguracionBackup({ config }: { config: any 
          </button>
       </div>
     </form>
+    </>
   )
 }
