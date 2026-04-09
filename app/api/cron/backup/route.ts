@@ -27,11 +27,19 @@ export async function GET(request: Request) {
 
     let enviados = 0
 
+    // Establecer la fecha actual y su versión compensada a UTC-5 para extraer bien el "Día Local"
+    const ahora = new Date()
+    const ahoraLocal = new Date(ahora.getTime() - (5 * 60 * 60 * 1000))
+    const hoyIso = ahoraLocal.toISOString().split('T')[0]
+    
+    // En Javascript getUTCDay() da 0 para Domingo, 1 para Lunes. Lo ajustamos: 1 Lunes a 7 Domingo.
+    const diaSemanaActual = ahoraLocal.getUTCDay() === 0 ? 7 : ahoraLocal.getUTCDay()
+    const diaMesActual = ahoraLocal.getUTCDate()
+
     for (const usuario of usuarios) {
       if (!usuario.emailDestino) continue;
 
       // Evaluar frecuencia temporal
-      const ahora = new Date()
       const ultimo = usuario.ultimoBackupEnviado
 
       let tocaEnviar = false
@@ -39,12 +47,9 @@ export async function GET(request: Request) {
       if (!ultimo) {
         tocaEnviar = true
       } else {
-        // En Javascript getDay() da 0 para Domingo, 1 para Lunes. Lo ajustamos: 1 Lunes a 7 Domingo.
-        const diaSemanaActual = ahora.getDay() === 0 ? 7 : ahora.getDay()
-        const diaMesActual = ahora.getDate()
+        const ultimoLocal = new Date(ultimo.getTime() - (5 * 60 * 60 * 1000))
+        const ultimoIso = ultimoLocal.toISOString().split('T')[0]
         
-        const ultimoIso = ultimo.toISOString().split('T')[0]
-        const hoyIso = ahora.toISOString().split('T')[0]
         const seEnvioHoy = ultimoIso === hoyIso
 
         if (!seEnvioHoy) {
@@ -156,7 +161,7 @@ export async function GET(request: Request) {
         const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
 
         // --- ENVIAR CORREO ---
-        const fechaStr = ahora.toISOString().split('T')[0]
+        const fechaStr = hoyIso
         
         if (process.env.SMTP_USER && process.env.SMTP_PASS) {
             await transporter.sendMail({
