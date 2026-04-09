@@ -22,20 +22,67 @@ type Cliente = {
 
 type Props = {
   clientes: Cliente[]
-  totalCapitalEnCalle: number
-  totalClientesActivos: number
-  vencidos: GrupoDeuda[]
-  porVencer: GrupoDeuda[]
+  agenda: any[]
+  categorias: any[]
 }
 
-export default function DashboardCliente({ clientes, agenda, categorias }: Props) {
+export default function DashboardCliente({ clientes, agenda, categorias = [] }: Props) {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | 'TODOS'>('TODOS')
   const [busqueda, setBusqueda] = useState('')
   const [descargando, setDescargando] = useState(false)
 
-  const clientesFiltrados = clientes.filter(c => 
-    c.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  // 1. Filtrar Clientes (Por texto o por tener prestamos en esa categoria)
+  const clientesFiltrados = clientes.map(c => {
+    if (categoriaSeleccionada === 'TODOS') return c
+    return {
+      ...c,
+      prestamos: c.prestamos.filter((p: any) => p.categoriaId === categoriaSeleccionada)
+    }
+  }).filter(c => 
+    c.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
+    (categoriaSeleccionada === 'TODOS' || c.prestamos.length > 0)
   )
+
+  // 2. Recalcular KPIs
+  const totalClientesActivos = clientesFiltrados.filter(c => c.prestamos.length > 0).length
+  const totalCapitalEnCalle = clientesFiltrados.reduce((totalGlobal, cliente) => {
+    return totalGlobal + cliente.prestamos.reduce((totalPrestamo: number, p: any) => {
+      const esperado = p.cuotas.reduce((sum: number, c: any) => sum + Number(c.montoEsperado), 0)
+      const pagado = p.cuotas.reduce((sum: number, c: any) => sum + Number(c.montoPagado), 0)
+      return totalPrestamo + (esperado - pagado)
+    }, 0)
+  }, 0)
+
+  // 3. Filtrar Agenda y Agrupar
+  const agendaFiltrada = categoriaSeleccionada === 'TODOS' 
+    ? agenda 
+    : agenda.filter((item: any) => item.categoria?.id === categoriaSeleccionada)
+
+  const agruparDeudas = (lista: any[]) => {
+    const grupos: any = {}
+    lista.forEach(item => {
+      const key = item.prestamoId 
+      const deuda = item.montoEsperado - item.montoPagado
+      if (!grupos[key]) {
+         grupos[key] = { prestamoId: item.prestamoId, clienteNombre: item.clienteNombre, fechaVencimiento: item.fechaVencimiento, totalDeuda: 0, cantidadCuotas: 0 }
+      }
+      grupos[key].totalDeuda += deuda
+      grupos[key].cantidadCuotas += 1
+    })
+    return Object.values(grupos) as GrupoDeuda[]
+  }
+
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+
+  const vencidos = agruparDeudas(agendaFiltrada.filter((item: any) => {
+    const f = new Date(item.fechaVencimiento); f.setHours(0,0,0,0);
+    return f < hoy
+  }))
+  const porVencer = agruparDeudas(agendaFiltrada.filter((item: any) => {
+    const f = new Date(item.fechaVencimiento); f.setHours(0,0,0,0);
+    return f >= hoy
+  })).slice(0, 5)
 
   const vencidosOrdenados = [...vencidos].sort((a, b) => 
     new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime()
