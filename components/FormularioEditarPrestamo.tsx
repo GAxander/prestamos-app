@@ -121,6 +121,25 @@ export default function FormularioEditarPrestamo({ prestamo, clientes, categoria
           </div>
         </div>
 
+        <div className="space-y-2 relative mb-6">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block flex justify-between">
+            <span>Categoría del Préstamo</span>
+            <a href="/configuracion" target="_blank" className="text-[10px] text-indigo-500 hover:text-indigo-700 font-bold underline">Añadir Nueva</a>
+          </label>
+          <select 
+             name="categoriaId" 
+             value={categoriaId} 
+             onChange={e => setCategoriaId(Number(e.target.value) || '')}
+             required
+             className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400 outline-none transition-all text-slate-900 font-bold cursor-pointer shadow-sm"
+          >
+             <option value="" disabled>-- Elige una categoría --</option>
+             {categorias.map(cat => (
+               <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+             ))}
+          </select>
+        </div>
+
         <div className="space-y-5 pt-4 border-t border-slate-100">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Condiciones Iniciales</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

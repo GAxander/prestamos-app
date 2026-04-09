@@ -282,7 +282,8 @@ export async function procesarRenovacion(formData: FormData) {
   const fechaRenovacion = new Date(formData.get('fechaRenovacion') as string)
   const fechaPrimerPago = new Date(formData.get('fechaPrimerPago') as string)
   const tipoMensual = formData.get('tipoMensual') as string || 'FECHA_FIJA'
-  const categoriaId = formData.get('categoriaId') ? Number(formData.get('categoriaId')) : null
+  const categoriaIdStr = formData.get('categoriaId') as string
+  const categoriaId = categoriaIdStr ? Number(categoriaIdStr) : null
 
   // 1. Buscamos el préstamo viejo
   const prestamoViejo = await prisma.prestamo.findUnique({
@@ -477,6 +478,8 @@ export async function actualizarPrestamo(formData: FormData) {
   const fechaPrimerPagoRaw = formData.get('fechaPrimerPago') as string
   const fechaPrimerPago = fechaPrimerPagoRaw ? new Date(fechaPrimerPagoRaw) : fechaInicio
   const tipoMensual = formData.get('tipoMensual') as string || 'FECHA_FIJA'
+  const categoriaIdStr = formData.get('categoriaId') as string
+  const categoriaId = categoriaIdStr ? Number(categoriaIdStr) : null
 
   // 1. Verificamos si ya le han hecho pagos
   const prestamoExistente = await prisma.prestamo.findUnique({
