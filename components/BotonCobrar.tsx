@@ -65,22 +65,23 @@ export default function BotonCobrar({ cuota, prestamoId, interesDiario }: Props)
 
   if (abierto) {
     return (
-      <div className="absolute right-0 bottom-full mb-3 z-50 animate-in fade-in zoom-in duration-200">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <form 
             action={registrarPago} 
             onSubmit={() => setAbierto(false)} 
-            className="flex flex-col gap-4 bg-white/95 backdrop-blur-xl p-5 rounded-2xl border border-indigo-100 shadow-[0_10px_40px_-10px_rgba(99,102,241,0.3)] w-80 ring-1 ring-slate-900/5 relative"
+            className="flex flex-col gap-4 bg-white/95 backdrop-blur-xl p-6 rounded-2xl shadow-2xl shadow-indigo-500/20 w-full max-w-sm ring-1 ring-white/50 relative animate-in zoom-in-95 duration-200"
           >
-            {/* Flechita del popup */}
-            <div className="absolute -bottom-2 right-6 w-4 h-4 bg-white/95 border-b border-r border-indigo-100 transform rotate-45 z-[-1] backdrop-blur-xl ring-1 ring-slate-900/5"></div>
 
-            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                <p className="text-xs font-black text-indigo-800 uppercase tracking-widest flex items-center gap-1.5">
-                    <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    Recepcionar Pago
-                </p>
-                <button type="button" onClick={() => setAbierto(false)} className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div>
+                   <p className="text-sm font-black text-indigo-800 uppercase tracking-widest flex items-center gap-1.5">
+                       <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                       Recepcionar Pago
+                   </p>
+                   <p className="text-xs text-slate-500 font-medium mt-1">Cuota #{cuota.numero} • Vence: {new Date(cuota.fechaVencimiento).toLocaleDateString('es-PE', {timeZone: 'UTC'})}</p>
+                </div>
+                <button type="button" onClick={() => setAbierto(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors shadow-sm self-start">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
             
