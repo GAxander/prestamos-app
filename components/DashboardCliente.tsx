@@ -28,7 +28,8 @@ type Props = {
   porVencer: GrupoDeuda[]
 }
 
-export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalClientesActivos, vencidos, porVencer }: Props) {
+export default function DashboardCliente({ clientes, agenda, categorias }: Props) {
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | 'TODOS'>('TODOS')
   const [busqueda, setBusqueda] = useState('')
   const [descargando, setDescargando] = useState(false)
 
@@ -236,10 +237,23 @@ export default function DashboardCliente({ clientes, totalCapitalEnCalle, totalC
 
       {/* LISTA CLIENTES */}
       <div id="seccion-cartera" className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60 overflow-hidden min-h-[500px]">
-        <div className="px-8 py-6 border-b border-slate-100 bg-white flex justify-between items-center">
+        <div className="px-8 py-6 border-b border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Directorio de Clientes</h2>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">{clientesFiltrados.length} Registros Totales</p>
+          </div>
+          <div className="w-full sm:w-auto flex items-center gap-2">
+             <span className="text-sm font-bold text-slate-500">Categoría:</span>
+             <select 
+               className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer w-full sm:w-auto"
+               value={categoriaSeleccionada}
+               onChange={(e) => setCategoriaSeleccionada(e.target.value === 'TODOS' ? 'TODOS' : Number(e.target.value))}
+             >
+                <option value="TODOS">Todas</option>
+                {categorias.map((cat: any) => (
+                  <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                ))}
+             </select>
           </div>
         </div>
 

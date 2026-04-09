@@ -14,10 +14,16 @@ export default async function EditarPrestamoPage(props: { params: Promise<{ id: 
 
   if (!prestamo) return notFound()
 
-  // 2. Buscamos todos los clientes para el buscador
   const clientes = await prisma.cliente.findMany({ 
+    where: { usuarioId: prestamo.cliente.usuarioId },
     select: { id: true, nombre: true },
     orderBy: { nombre: 'asc' } 
+  })
+
+  // 3. Buscamos todas las categorías del usuario
+  const categorias = await prisma.categoria.findMany({
+    where: { usuarioId: prestamo.cliente.usuarioId },
+    orderBy: { nombre: 'asc' }
   })
 
   return (
@@ -29,10 +35,7 @@ export default async function EditarPrestamoPage(props: { params: Promise<{ id: 
           <p className="text-xs opacity-90">Corregir errores o eliminar</p>
         </div>
 
-        {/* 3. AQUI ESTÁ LA MAGIA:
-            En lugar de escribir el HTML aquí, le pasamos los datos 
-            al componente inteligente que sabe manejar confirmaciones */}
-        <FormularioEditarPrestamo prestamo={prestamo} clientes={clientes} />
+        <FormularioEditarPrestamo prestamo={prestamo} clientes={clientes} categorias={categorias} />
 
       </div>
     </div>

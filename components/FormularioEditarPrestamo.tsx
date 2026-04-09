@@ -11,10 +11,12 @@ type Cliente = {
 
 type Props = {
   prestamo: any
-  clientes: Cliente[]
+  clientes: any[]
+  categorias?: any[]
 }
 
-export default function FormularioEditarPrestamo({ prestamo, clientes }: Props) {
+export default function FormularioEditarPrestamo({ prestamo, clientes, categorias = [] }: Props) {
+  const [categoriaId, setCategoriaId] = useState<number | ''>(prestamo.categoriaId || '')
   const hayPagos = prestamo.cuotas.some((c: any) => c.estado === 'PAGADO')
 
   const [nombre, setNombre] = useState(prestamo.cliente.nombre)

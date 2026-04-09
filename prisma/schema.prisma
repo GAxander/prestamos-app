@@ -19,7 +19,8 @@ model Usuario {
   diaMesBackup        Int?      // 1 a 31
   ultimoBackupEnviado DateTime?
 
-  clientes Cliente[]
+  clientes   Cliente[]
+  categorias Categoria[]
 }
 
 model Cliente {
@@ -49,6 +50,9 @@ model Prestamo {
 
   // RELACIÓN CORREGIDA (Solo debe haber una línea aquí)
   cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  
+  categoriaId Int?
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
   
   cuotas  Cuota[]
   pagos   Pago[]
@@ -88,4 +92,14 @@ model Nota {
 
   // RELACIÓN CORREGIDA
   prestamo   Prestamo @relation(fields: [prestamoId], references: [id], onDelete: Cascade)
+}
+
+model Categoria {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  color     String?  @default("#6366f1") // Color para la UI
+  usuarioId Int
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  prestamos Prestamo[]
 }

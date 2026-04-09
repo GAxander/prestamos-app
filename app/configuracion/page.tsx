@@ -1,9 +1,13 @@
 import { obtenerConfiguracionRespaldo } from '@/app/actions'
 import Header from '@/components/Header'
 import FormularioConfiguracionBackup from '@/components/FormularioConfiguracionBackup'
-
+import CrudCategorias from '@/components/CrudCategorias'
+import { prisma } from '@/lib/prisma'
+import { verificarSesion } from '@/lib/auth'
 export default async function ConfiguracionPage() {
+  const userId = await verificarSesion()
   const config = await obtenerConfiguracionRespaldo()
+  const categorias = await prisma.categoria.findMany({ where: { usuarioId: userId }, orderBy: { id: 'asc' } })
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-20">
@@ -30,6 +34,19 @@ export default async function ConfiguracionPage() {
           </div>
           
           <FormularioConfiguracionBackup config={config} />
+        </div>
+
+        {/* 2. CATEGORÍAS */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+          <div className="bg-gradient-to-r from-violet-50 to-white px-6 py-5 border-b border-violet-100/50 flex items-center gap-3">
+             <span className="text-xl">🏷️</span>
+             <div>
+               <h2 className="text-[15px] font-bold text-slate-800">Categorías de Préstamos</h2>
+               <p className="text-xs text-slate-500 font-medium mt-0.5">Agrupa tus préstamos para filtrar los totales en el panel principal.</p>
+             </div>
+          </div>
+          
+          <CrudCategorias categoriasIniciales={categorias} />
         </div>
       </main>
     </div>

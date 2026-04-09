@@ -11,10 +11,11 @@ async function getDatosIniciales(userId: number) {
   // A. Traer Clientes
   const clientesRaw = await prisma.cliente.findMany({
     where: { usuarioId: userId },
+    where: { usuarioId: userId },
     include: {
       prestamos: {
         where: { estado: { in: ['ACTIVO', 'PENDIENTE'] } },
-        include: { cuotas: true }
+        include: { cuotas: true, categoria: true }
       }
     },
     orderBy: { nombre: 'asc' }
@@ -31,7 +32,7 @@ async function getDatosIniciales(userId: number) {
     },
     include: {
       prestamo: {
-        include: { cliente: true }
+        include: { cliente: true, categoria: true }
       }
     },
     orderBy: { fechaVencimiento: 'asc' }
@@ -62,10 +63,13 @@ async function getDatosIniciales(userId: number) {
     montoPagado: Number(c.montoPagado),
     clienteNombre: c.prestamo.cliente.nombre,
     prestamoId: c.prestamo.id,
-    frecuencia: c.prestamo.frecuencia
+    frecuencia: c.prestamo.frecuencia,
+    categoria: c.prestamo.categoria || null
   }))
 
-  return { clientes: clientesSanitizados, agenda: agendaSanitizada }
+  const categorias = await prisma.categoria.findMany({ where: { usuarioId: userId }, orderBy: { id: 'asc' } })
+
+  return { clientes: clientesSanitizados, agenda: agendaSanitizada, categorias }
 }
 
 // --- FUNCIÓN DE AGRUPAMIENTO ---
@@ -82,7 +86,8 @@ function agruparDeudas(lista: any[]): GrupoDeuda[] {
         clienteNombre: item.clienteNombre,
         fechaVencimiento: item.fechaVencimiento, 
         totalDeuda: 0,
-        cantidadCuotas: 0
+        cantidadCuotas: 0,
+        categoria: item.categoria || null
       }
     }
 
@@ -100,33 +105,10 @@ export default async function Home() {
   const usuario = await prisma.usuario.findUnique({ where: { id: userId } })
   
   // 2. Pedimos los datos sanitizados
-  const { clientes, agenda } = await getDatosIniciales(userId)
+  const { clientes, agenda, categorias } = await getDatosIniciales(userId)
 
   // KPI Cálculos
-  const clientesConDeuda = clientes.filter(c => c.prestamos.length > 0).length
-  const capitalEnCalle = clientes.reduce((totalGlobal, cliente) => {
-    return totalGlobal + cliente.prestamos.reduce((totalPrestamo, p) => {
-      const esperado = p.cuotas.reduce((sum, c) => sum + c.montoEsperado, 0)
-      const pagado = p.cuotas.reduce((sum, c) => sum + c.montoPagado, 0)
-      return totalPrestamo + (esperado - pagado)
-    }, 0)
-  }, 0)
-
-  // Clasificación
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-
-  const listaVencidos = agenda.filter(item => {
-    const f = new Date(item.fechaVencimiento); f.setHours(0,0,0,0);
-    return f < hoy
-  })
-  const listaPorVencer = agenda.filter(item => {
-    const f = new Date(item.fechaVencimiento); f.setHours(0,0,0,0);
-    return f >= hoy
-  })
-
-  const vencidosAgrupados = agruparDeudas(listaVencidos)
-  const porVencerAgrupados = agruparDeudas(listaPorVencer).slice(0, 5)
+  // Se pasó el cálculo al cliente
 
   return (
     <div className="pb-10 max-w-7xl mx-auto">
@@ -135,10 +117,8 @@ export default async function Home() {
       <div className="relative animate-fade-in-up">
          <DashboardCliente 
             clientes={clientes} 
-            totalCapitalEnCalle={capitalEnCalle} 
-            totalClientesActivos={clientesConDeuda}
-            vencidos={vencidosAgrupados}      
-            porVencer={porVencerAgrupados}    
+            agenda={agenda}
+            categorias={categorias}
          />
       </div>
     </div>

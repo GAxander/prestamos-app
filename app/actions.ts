@@ -12,6 +12,50 @@ import { createSession, logout, verificarSesion } from '@/lib/auth'
 
 // app/actions.ts
 
+// --- CRUD CATEGORIAS ---
+export async function crearCategoria(nombre: string, color?: string) {
+  const userId = await verificarSesion()
+  await prisma.categoria.create({
+    data: { nombre, color: color || '#3b82f6', usuarioId: userId }
+  })
+  revalidatePath('/configuracion')
+  revalidatePath('/')
+}
+
+export async function editarCategoria(id: number, nombre: string, color: string) {
+  const userId = await verificarSesion()
+  await prisma.categoria.update({
+    where: { id, usuarioId: userId },
+    data: { nombre, color }
+  })
+  revalidatePath('/configuracion')
+  revalidatePath('/')
+}
+
+export async function eliminarCategoria(id: number) {
+  const userId = await verificarSesion()
+  let categoriaMio = await prisma.categoria.findFirst({
+    where: { nombre: 'Mío', usuarioId: userId }
+  })
+  if(!categoriaMio) {
+    categoriaMio = await prisma.categoria.create({ data: { nombre: 'Mío', color: '#3b82f6', usuarioId: userId }})
+  }
+  await prisma.prestamo.updateMany({
+    where: { categoriaId: id, cliente: { usuarioId: userId } },
+    data: { categoriaId: categoriaMio.id }
+  })
+  await prisma.categoria.delete({
+    where: { id, usuarioId: userId }
+  })
+  revalidatePath('/configuracion')
+  revalidatePath('/')
+}
+
+export async function obtenerCategorias() {
+  const userId = await verificarSesion()
+  return await prisma.categoria.findMany({ where: { usuarioId: userId }, orderBy: { id: 'asc' } })
+}
+
 export async function registro(formData: FormData) {
   const username = formData.get('username') as string
   const password = formData.get('password') as string
@@ -62,6 +106,7 @@ export async function crearPrestamo(formData: FormData) {
   
   const moraDiaria = Number(formData.get('moraDiaria') || 0)
   const tipoMensual = formData.get('tipoMensual') as string || '30_DIAS'
+  const categoriaId = formData.get('categoriaId') ? Number(formData.get('categoriaId')) : null
 
   if (!nombre || monto <= 0 || numeroCuotas <= 0) {
     throw new Error("Datos inválidos")
@@ -129,6 +174,7 @@ export async function crearPrestamo(formData: FormData) {
       plazo: numeroCuotas, 
       fechaInicio: fechaInicio,
       moraDiaria: moraDiaria,
+      categoriaId: categoriaId,
       cuotas: {
         create: cuotas.map((c) => ({
           numero: c.numero,
@@ -236,6 +282,7 @@ export async function procesarRenovacion(formData: FormData) {
   const fechaRenovacion = new Date(formData.get('fechaRenovacion') as string)
   const fechaPrimerPago = new Date(formData.get('fechaPrimerPago') as string)
   const tipoMensual = formData.get('tipoMensual') as string || 'FECHA_FIJA'
+  const categoriaId = formData.get('categoriaId') ? Number(formData.get('categoriaId')) : null
 
   // 1. Buscamos el préstamo viejo
   const prestamoViejo = await prisma.prestamo.findUnique({
@@ -455,7 +502,7 @@ export async function actualizarPrestamo(formData: FormData) {
     // Si hay pagos, SOLO actualizamos al cliente (por seguridad contable)
     await prisma.prestamo.update({
       where: { id: prestamoId },
-      data: { clienteId: clienteIdFinal }
+      data: { clienteId: clienteIdFinal, categoriaId: categoriaId }
     })
   } else {
     // 4. Si NO hay pagos, borramos el cronograma viejo y generamos uno nuevo exacto
@@ -504,6 +551,7 @@ export async function actualizarPrestamo(formData: FormData) {
           plazo: numeroCuotas,
           frecuencia: frecuencia,
           moraDiaria: moraDiaria,
+          categoriaId: categoriaId,
           cuotas: { create: nuevasCuotas }
         }
       })

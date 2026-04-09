@@ -22,6 +22,12 @@ export default async function NuevoPrestamoPage() {
     orderBy: { nombre: 'asc' }
   })
 
+  // Obtener las categorías del usuario
+  const categorias = await prisma.categoria.findMany({
+    where: { usuarioId: userId },
+    orderBy: { nombre: 'asc' }
+  })
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
@@ -31,7 +37,7 @@ export default async function NuevoPrestamoPage() {
         </div>
 
         {/* Pasamos los clientes ya filtrados al formulario */}
-        <FormularioPrestamo clientesExistentes={clientes} />
+        <FormularioPrestamo clientesExistentes={clientes} categorias={categorias} />
 
       </div>
     </div>
