@@ -17,7 +17,7 @@ export default async function PerfilClientePage(props: { params: Promise<{ id: s
     include: {
       prestamos: {
         orderBy: { fechaInicio: 'desc' },
-        include: { cuotas: true }
+        include: { cuotas: true, categoria: true }
       }
     }
   })
@@ -132,6 +132,18 @@ export default async function PerfilClientePage(props: { params: Promise<{ id: s
                                                 <span className="text-xs font-bold px-2 py-1 rounded-md bg-indigo-50/80 text-indigo-700 uppercase tracking-wider backdrop-blur-sm border border-indigo-100/50">
                                                     #{prestamo.id}
                                                 </span>
+                                                {prestamo.categoria && (
+                                                    <span 
+                                                        className="text-[10px] font-black uppercase px-2 py-1 rounded-md shadow-sm opacity-90"
+                                                        style={{ 
+                                                            backgroundColor: prestamo.categoria.color ? `${prestamo.categoria.color}20` : '#f3f4f6', 
+                                                            color: prestamo.categoria.color || '#4b5563',
+                                                            border: `1px solid ${prestamo.categoria.color}40`
+                                                        }}
+                                                    >
+                                                        {prestamo.categoria.nombre}
+                                                    </span>
+                                                )}
                                             </div>
                                             <span className="bg-emerald-100/80 text-emerald-700 text-[10px] uppercase font-bold px-2.5 py-1 rounded-md backdrop-blur-sm shadow-sm">
                                                 Activo

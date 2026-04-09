@@ -20,7 +20,8 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
       cliente: true,
       cuotas: { orderBy: { numero: 'asc' } },
       pagos: { orderBy: { fecha: 'desc' } },
-      notas: { orderBy: { fecha: 'desc' } }
+      notas: { orderBy: { fecha: 'desc' } },
+      categoria: true
     }
   })
 
@@ -120,6 +121,18 @@ export default async function DetallePrestamo(props: { params: Promise<{ id: str
                 <h1 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight tracking-tight">{prestamo.cliente.nombre}</h1>
                 <p className="text-indigo-600 text-xs font-bold uppercase tracking-widest mt-1.5 flex items-center">
                 <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded mr-2">#{prestamo.id}</span>
+                {prestamo.categoria && (
+                    <span 
+                        className="text-[10px] uppercase px-2 py-0.5 rounded mr-2"
+                        style={{ 
+                            backgroundColor: prestamo.categoria.color ? `${prestamo.categoria.color}20` : '#e0e7ff', 
+                            color: prestamo.categoria.color || '#4338ca',
+                            border: `1px solid ${prestamo.categoria.color}40`
+                        }}
+                    >
+                        {prestamo.categoria.nombre}
+                    </span>
+                )}
                 {prestamo.frecuencia}
                 </p>
             </div>
